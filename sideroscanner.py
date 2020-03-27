@@ -57,8 +57,9 @@ if makedb == True:
     
     if db == 'irompdb':
         sequences = []   
-        irompnames = ["iutA", "fecA", "fepA", "cirA", "iroN", "fyuA", "fhuA", "fhuE", "fiu",
-                    "piuA", "fptA", "pirA", "fiuA", "bauA","pfeA","femA","foxA"]
+        irompnames = ["iutA","fecA","fepA","cirA","iroN","fyuA","fhuA","fhuE","fiu","fatA",
+                    "piuA","fptA","pirA","fiuA","hxuC","bauA","pfeA","femA","foxA", "fitA",
+                    "hmuR","pfuA","oprC","fpvA","fpvB"]
         for iromp in irompnames: # Loops over IROMPs and writes to separate fasta file
             with open(iromp, 'wb') as f:
                 print("Fetching: "+iromp)
