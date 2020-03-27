@@ -23,7 +23,7 @@ parser.add_argument('-b', '--blast_only', action = 'store_true',
                     help=('Use this option to skip HMM Pre-filter.'), default=False)
 parser.add_argument('--hmm', default='iromp.hmm',
                     help=('Path to HMM profile, must be in hmm format.'), type = str)
-parser.add_argument('--seq', default='SGH10.faa', 
+parser.add_argument('--seq', default='SGH10.fna', 
                     help=('Path to fasta input, autodetects DNA or Protein.'), type = str)
 parser.add_argument('--db', default='irompdb',
                     help=('Path to protein database, must be in fasta format.'), type = str)
@@ -35,12 +35,13 @@ parser.add_argument('--desc', action = 'store_true',
 args = parser.parse_args()
 hmm = args.hmm
 seq = args.seq
-irompdb = args.db
+db = args.db
 makedb = args.makedb
 blast_only = args.blast_only
 desc = args.desc
 
 ### Global Variables ###
+
 FNULL = open(os.devnull, 'w') # This prevents stdout.
 
 if makedb == True:
@@ -54,35 +55,38 @@ if makedb == True:
             response = requests.get("http://www.uniprot.org/uniprot/", params)
             f.write(response.content) # Writes output to file
     
-    sequences = []   
-    irompnames = ["iutA", "fecA", "fepA", "cirA", "iroN", "fyuA", "fhuA", "fhuE", "fiu",
-                  "piuA", "fptA", "pirA", "fiuA", "bauA","pfeA","femA","foxA"]
-    for iromp in irompnames: # Loops over IROMPs and writes to separate fasta file
-         with open(iromp, 'wb') as f:
-             print("Fetching: "+iromp)
-             uniprot_search(iromp)
-         with open(iromp, "r") as handle:
-             print("Processing "+iromp+" sequences")
-             for record in SeqIO.parse(handle, "fasta"):
-                 record.id = iromp
-                 record.description = record.description.replace(record.name,'').lstrip()
-                 sequences.append(record)
-    irompdb = SeqIO.write(sequences,'irompdb','fasta')
-    for iromp in irompnames: 
-        os.remove(iromp)
+    if db == 'irompdb':
+        sequences = []   
+        irompnames = ["iutA", "fecA", "fepA", "cirA", "iroN", "fyuA", "fhuA", "fhuE", "fiu",
+                    "piuA", "fptA", "pirA", "fiuA", "bauA","pfeA","femA","foxA"]
+        for iromp in irompnames: # Loops over IROMPs and writes to separate fasta file
+            with open(iromp, 'wb') as f:
+                print("Fetching: "+iromp)
+                uniprot_search(iromp)
+            with open(iromp, "r") as handle:
+                for record in SeqIO.parse(handle, "fasta"):
+                    record.id = iromp
+                    record.description = record.description.replace(record.name,'').lstrip()
+                    sequences.append(record)
+        irompdb = SeqIO.write(sequences,'irompdb','fasta')
+        for iromp in irompnames: 
+            os.remove(iromp)
     
     def make_nr_db(in_file, out_file):
         cmd = ['cd-hit','-i',in_file,'-o','nr','-c','1','-T','0']
         print('Removing redundancy')
         subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
+        if out_file.endswith('.fasta'):
+            out_file = os.path.splitext(out_file)[0]
         cmd = ['diamond','makedb','--in','nr','-d', out_file]
-        print('Building DB')
+        print('Building DB: '+out_file)
         subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
-        os.remove(in_file)
         os.remove('nr.clstr')
         os.remove('nr')
     
-    make_nr_db('irompdb','irompdb')
+    make_nr_db(db,db)
+    if db == 'irompdb':
+        os.remove(db)
     
     # Fetch HMM
     url = 'https://pfam.xfam.org/family/PF00593/hmm'
@@ -109,20 +113,20 @@ if makedb == False:
         print("Filtering with hmmscan")
         subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
         accessions = []
-        for hit in SearchIO.parse('hmmer_out', 'hmmscan3-domtab'):
+        for hit in SearchIO.parse('hmmer_out','hmmscan3-domtab'):
             accessions.append(hit._id)      
         records = (r for r in SeqIO.parse(in_file,"fasta")if r.id in accessions)        
-        SeqIO.write(records, 'blast_in', "fasta")
+        SeqIO.write(records,'blast_in', "fasta")
 
-    def run_diamond(in_file, irompdb):
+    def run_diamond(in_file, db):
         if desc == True:
-            cmd = ['diamond', 'blastp','--more-sensitive', '-k', '1', '--id', '80', '--outfmt',
+            cmd = ['diamond', 'blastp', '-k', '1', '--id', '80', '--outfmt',
                    '6','qseqid','salltitles','pident','length','qstart','qend','sstart','send',
-                   'evalue','bitscore','--subject-cover','80', '-q', in_file, '-d', irompdb]
+                   'evalue','bitscore','--subject-cover','80', '-q', in_file, '-d', db]
         if desc == False:
-            cmd = ['diamond', 'blastp','--more-sensitive', '-k', '1', '--id', '80', '--outfmt',
+            cmd = ['diamond', 'blastp', '-k', '1', '--id', '80', '--outfmt',
                    '6','qseqid','sseqid','pident','length','qstart','qend','sstart','send',
-                   'evalue','bitscore','--subject-cover','60', '-q', in_file, '-d', irompdb]
+                   'evalue','bitscore','--subject-cover','60', '-q', in_file, '-d', db]
         blast = subprocess.Popen(cmd, stdout=subprocess.PIPE)
         print("Aligning proteins with Diamond")                  
         blast_out = StringIO(blast.communicate()[0].decode('utf-8'))
@@ -141,26 +145,26 @@ if makedb == False:
     # Protein input with diamond only
     if "E" in test._seq._data and blast_only == True:
         print(seq+": Protein fasta detected")
-        run_diamond(seq,'irompdb')
+        run_diamond(seq,db)
     
     # Protein input with hmmer and diamond
     if "E" in test._seq._data and blast_only == False:
         print(seq+": Protein fasta detected")
         run_hmmscan(seq, hmm)
-        run_diamond('blast_in','irompdb')
+        run_diamond('blast_in',db)
         
     # DNA input with diamond only
     if "E" not in test._seq._data and blast_only == True:
         seqname = os.path.splitext(seq)[0]
         run_prodigal(seq, seqname+'.faa')
-        run_diamond(seqname+'.faa', 'irompdb')
+        run_diamond(seqname+'.faa',db)
     
     # DNA input with hmmer and diamond
     if "E" not in test._seq._data and blast_only == False:
         seqname = os.path.splitext(seq)[0]
         run_prodigal(seq, seqname+'.faa')
         run_hmmscan(seqname+'.faa', hmm)
-        run_diamond('blast_in','irompdb')
+        run_diamond('blast_in',db)
     
     ### Cleanup ###
     junk = ['hmmer_out','blast_in']
