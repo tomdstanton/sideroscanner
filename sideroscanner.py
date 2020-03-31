@@ -152,7 +152,7 @@ def main():
             records = (r for r in SeqIO.parse(in_file,"fasta")if r.id in accessions)        
             SeqIO.write(records,'blast_in', "fasta")
 
-        def run_diamond(method, in_file, db, filename, plasmids):
+        def run_diamond(method, in_file, db, filename, p):
             if annot == True:
                 cmd = ['diamond', method, '-k', '1', '--id', '80', '--outfmt', '6', 'qseqid', 'salltitles',
                     'pident', 'bitscore', '--subject-cover', '60', '-q', in_file, '-d', db]
@@ -167,8 +167,8 @@ def main():
             diamond_df = pd.read_csv(blast_out, sep="\t", header=None,names=['Query','Hit','Percent ID','Bitscore'])
             diamond_df.insert(0, 'Accession', filename)
             if genloc == True:
-                if len(plasmids) != 0: 
-                    diamond_df['Genomic Location'] = diamond_df['Query'].str.contains('|'.join(plasmids))
+                if len(p) != 0: 
+                    diamond_df['Genomic Location'] = diamond_df['Query'].str.contains('|'.join(p))
                     diamond_df['Genomic Location'] = diamond_df['Genomic Location'].replace({True:'Plasmid',False:'Chromosome'})
                 else:      
                     diamond_df['Genomic Location'] = 'Chromosome'
@@ -206,14 +206,14 @@ def main():
                     print("Cannot screen plasmids in protein fasta")
                 else:
                     if blast_only == True:
-                        x = run_diamond('blastp', seq, db, filename, plasmids)
+                        x = run_diamond('blastp', seq, db, filename,0)
                         if out == 'stdout':
                             print(x.to_csv(sep='\t', index=False))
                         else:
                             df = df.append(x)
                     if blast_only == False:                   
                         run_hmmscan(seq, hmm)
-                        x = run_diamond('blastp', 'blast_in', db, filename, plasmids)
+                        x = run_diamond('blastp', 'blast_in', db, filename,0)
                         if out == 'stdout':
                             print(x.to_csv(sep='\t', index=False))
                         else:
