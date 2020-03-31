@@ -32,30 +32,44 @@ conda config --add channels conda-forge
 ```
 ### Install dependencies
 ```
-conda install python pandas biopython blast diamond cd-hit prodigal hmmer
+conda install python requests pandas biopython blast diamond cd-hit prodigal hmmer
 ```
-### You're good to go!
+## Usage
 
-usage: sideroscanner.py [-h] [--makedb] [-s [SEQ [SEQ ...]]] [-o OUT] [-d DB]
-                        [-m HMM] [-x] [-b] [-a] [-g]
+Input has to be a nucleotide or amino acid fasta file and molecule type will be auto-detected.
+Proteins are extracted from nucleotide inputs using Prodigal, an accurate bacterial gene-predction program.
+Then the TonB dependent receptor HMM filters proteins belonging to this family and passes them to Diamond
+which performs a fast local blastp alignment against the curated database. Additionally, nucleotide
+inputs can be screened for plasmid contigs to determine which hits are plasmid-encoded.
+If you don't want the additional runtime of gene-prediction, you choose to perform a trasnlated blastx
+alignemnt, however this will result in substantially fewer hits.
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --makedb              Setup TBDT DB and HMM profile
-  -s [SEQ [SEQ ...]], --seq [SEQ [SEQ ...]]
-                        Path to fasta input, autodetects DNA or Protein.
-  -o OUT, --out OUT     Path to output (comma-separated), otherwise prints to STDOUT.
-  -d DB, --db DB        Path to protein database:
-                        If used with --makedb, will process your own protein fasta file into a compatible DB.
-                        If used with scan, a diamond-formatted database is required.
-  -m HMM, --hmm HMM     Path to HMM profile, must be pressed in hmmer format.
-  -x, --blastx          Perform translated alignment (protein files will default to blastp).
-                        WARNING: This is the fastest option for nucleotide files but will result in fewer hits.
-  -b, --blast_only      Turns off HMM pre-filter.
-  -a, --annot           Add descriptions to hits
-  -g, --genloc          Turns on chromosome/plasmid detection: 
-                        Download the plsdb (https://ccb-microbe.cs.uni-saarland.de/plsdb/plasmids/download/)
-                        Place the blast db files in sideroscanner script directory.
-                            -plsdb.fna.nsq
-                            -plsdb.fna.nhr
-                            -plsdb.fna.nin
+The fastest method is to use CDS protein fasta inputs, which are then filtered and aligned as before,
+but without the additional gene-prediction step. You can also choose to turn off the HMM pre-filter in
+both methods. It is worth noting that CDS predicted with Prodigal from a nucleotide file results in
+more hits than CDS predicted with GeneMark and PGAP, although this might not always be the case.
+N.B. plasmid screening can only be performed on nucleotide input files.
+
+### Example usage: prepare database
+Prepare default database: ```sideroscanner.py --makedb```
+
+Process your own protein fasta file into a compatible DB: ```sideroscanner.py --makedb -d proteins.faa```
+
+### Example usage: scan
+Scan nucleotide: ```sideroscanner.py -s genome.fna```
+
+Scan nucleotide and determine genomic location of hits: ```sideroscanner.py -s genome.fna -g```
+
+Scan nucleotide quckly but fewer hits: ```sideroscanner.py -s genome.fna -x```
+
+Scan proteins: ```sideroscanner.py -s refseq_cds.fna```
+
+Scan proteins and turn off HMM pre-filter: ```sideroscanner.py -s refseq_cds.fna -b```
+
+Scan proteins with additional hit descriptions: ```sideroscanner.py -s refseq_cds.fna -a```
+
+For plasmid screening, download the plsdb (https://ccb-microbe.cs.uni-saarland.de/plsdb/plasmids/download/) 
+place the blast db files in sideroscanner script directory.
+-plsdb.fna.nsq
+-plsdb.fna.nhr
+-plsdb.fna.nin
