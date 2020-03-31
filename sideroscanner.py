@@ -95,6 +95,7 @@ def main():
                         'length:[500 TO 900] AND ' \
                         'locations:(location:"Cell outer membrane [SL-0040]")'.format(iromp),
                         'format': 'fasta'}
+                    print("Fetching: "+iromp)
                     fetch("http://www.uniprot.org/uniprot/", params, iromp)
                     with open(iromp, "r") as handle:
                         for record in SeqIO.parse(handle, "fasta"):
@@ -105,8 +106,10 @@ def main():
                 for iromp in irompnames: 
                     os.remove(iromp)
                 ### Get TBDT HMM from PFAM
+                print("Fetching HMM")
                 fetch('https://pfam.xfam.org/family/PF00593/hmm','','iromp.hmm')
                 cmd = ['hmmpress','iromp.hmm']
+                print("Pressing HMM")
                 subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
 
             def make_nr_db(in_file, out_file):
