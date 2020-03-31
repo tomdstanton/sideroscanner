@@ -35,7 +35,21 @@ conda config --add channels conda-forge
 conda install python requests pandas biopython blast diamond cd-hit prodigal hmmer
 ```
 ## Usage
-
+```
+sideroscanner.py [-h] [--makedb] [-s [SEQ [SEQ ...]]] [-o OUT] [-d DB]
+                        [-m HMM] [-x] [-b] [-a] [-g]
+  optional arguments:
+  -h, --help            show this help message and exit
+  --makedb              Setup TBDT DB and HMM profile
+  -s [SEQ [SEQ ...]]    Path to fasta input, autodetects DNA or Protein.
+  -o OUT, --out OUT     Path to output (comma-separated), otherwise prints to STDOUT.
+  -d DB, --db DB        Path to protein database:
+  -m HMM, --hmm HMM     Path to HMM profile, must be pressed in hmmer format.
+  -x, --blastx          Perform translated alignment (protein files will default to blastp).
+  -b, --blast_only      Turns off HMM pre-filter.
+  -a, --annot           Add descriptions to hits
+  -g, --genloc          Turns on chromosome/plasmid detection: 
+```
 Input has to be a nucleotide or amino acid fasta file and molecule type will be auto-detected.
 Proteins are extracted from nucleotide inputs using Prodigal, an accurate bacterial gene-predction program.
 Then the TonB dependent receptor HMM filters proteins belonging to this family and passes them to Diamond
