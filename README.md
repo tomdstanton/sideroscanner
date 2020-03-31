@@ -1,24 +1,23 @@
 # SideroScannner
 
 ## A tool for accuratley annotating siderophore uptake proteins in bacteria.
-Tom Stanton - Schneiders Lab - University of Edinburgh
-T.D.Stanton@sms.ed.ac.uk
+Tom Stanton -- Schneiders Lab -- University of Edinburgh
+-- T.D.Stanton@sms.ed.ac.uk -- tomdstanton@gmail.com --
 
 ## Introduction
 The ability to sequester iron is one of the key virulence determinants for 
-pathogentic bacteria. In the host, free iron is scarce so bacteria 
+pathogentic bacteria. In the host, available iron is scarce so bacteria 
 synthesise and secrete iron-chelating small molecules called siderophores.
-Once they have quired their ferric payload, they are uptaken back into the
-cell via ligand-gated transporters, powered by the TonB protein.
+Once they have aquired their ferric payload, they are transported back into 
+the cell via ligand-gated active transporters, powered by the TonB protein.
 These TonB-Dependent Transporters (TBDTs) are highly homologous, and are 
 frequently misannotated by automated annotation pipelines. This can result in
-the fallacious inferrence of a pathogens virulence or drug susceptibility.
-SideroScanner seeks to mitigate that problem by using a HMM prefilter and
+the fallacious inference of a pathogen's virulence or drug susceptibility.
+SideroScanner seeks to mitigate this problem by using a HMM pre-filter and
 aligning to curated protein database of TBDTs to annotate as accuratley,
 quickly and automatically as possible.
 
 ## Install with Conda
-
 ### Set up environment
 ```
 conda create -n sideroscanner
@@ -34,16 +33,20 @@ conda config --add channels conda-forge
 ```
 conda install python requests pandas biopython blast diamond cd-hit prodigal hmmer
 ```
+### Clone into directory
+```
+git clone https://github.com/tomdstanton/sideroscanner.git
+```
 ## Usage
 ```
 sideroscanner.py [-h] [--makedb] [-s [SEQ [SEQ ...]]] [-o OUT] [-d DB]
                         [-m HMM] [-x] [-b] [-a] [-g]
   optional arguments:
-  -h, --help            show this help message and exit
-  --makedb              Setup TBDT DB and HMM profile
+  -h, --help            Show this help message and exit.
+  --makedb              Setup TBDT DB and HMM profile.
   -s [SEQ [SEQ ...]]    Path to fasta input, autodetects DNA or Protein.
   -o OUT, --out OUT     Path to output (comma-separated), otherwise prints to STDOUT.
-  -d DB, --db DB        Path to protein database:
+  -d DB, --db DB        Path to protein database.
   -m HMM, --hmm HMM     Path to HMM profile, must be pressed in hmmer format.
   -x, --blastx          Perform translated alignment (protein files will default to blastp).
   -b, --blast_only      Turns off HMM pre-filter.
@@ -64,6 +67,9 @@ both methods. It is worth noting that CDS predicted with Prodigal from a nucleot
 more hits than CDS predicted with GeneMark and PGAP, although this might not always be the case.
 N.B. plasmid screening can only be performed on nucleotide input files.
 
+IMPORTANT: If running from outside the script's directory, you MUST supply the path for the database
+and HMM.
+
 ### Example usage: prepare database
 Prepare default database: ```sideroscanner.py --makedb```
 
@@ -74,7 +80,7 @@ Scan nucleotide: ```sideroscanner.py -s genome.fna```
 
 Scan nucleotide and determine genomic location of hits: ```sideroscanner.py -s genome.fna -g```
 
-Scan nucleotide quckly but fewer hits: ```sideroscanner.py -s genome.fna -x```
+Scan nucleotide quickly but fewer hits: ```sideroscanner.py -s genome.fna -x```
 
 Scan proteins: ```sideroscanner.py -s refseq_cds.fna```
 
