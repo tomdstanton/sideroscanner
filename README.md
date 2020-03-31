@@ -1,7 +1,7 @@
 # SideroScannner
 
 ## A tool for accuratley annotating siderophore uptake proteins in bacteria.
-Tom Stanton -- Schneiders Lab -- University of Edinburgh
+Tom Stanton -- Schneiders Lab -- University of Edinburgh<br/>
 -- T.D.Stanton@sms.ed.ac.uk -- tomdstanton@gmail.com --
 
 ## Introduction
