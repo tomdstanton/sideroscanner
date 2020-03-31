@@ -70,6 +70,6 @@ Scan proteins with additional hit descriptions: ```sideroscanner.py -s refseq_cd
 
 For plasmid screening, download the plsdb (https://ccb-microbe.cs.uni-saarland.de/plsdb/plasmids/download/) 
 place the blast db files in sideroscanner script directory.
--plsdb.fna.nsq
+(-plsdb.fna.nsq
 -plsdb.fna.nhr
--plsdb.fna.nin
+-plsdb.fna.nin)
