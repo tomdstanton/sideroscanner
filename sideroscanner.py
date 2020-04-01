@@ -207,23 +207,23 @@ def main():
         def run_diamond(method, in_file, db, filename, p):
             if annot == True:
                 cmd = ['diamond', method, '-k', '1', '--id', '80', '--outfmt', '6', 'qseqid', 'salltitles',
-                    'pident', 'bitscore', '--subject-cover', '60', '-q', in_file, '-d', db]
+                    'pident', 'bitscore', '--subject-cover', '40', '-q', in_file, '-d', db]
 
             if annot == False:
                 cmd = ['diamond', method, '-k', '1', '--id', '80', '--outfmt', '6', 'qseqid', 'sseqid',
-                    'pident', 'bitscore', '--subject-cover', '60', '-q', in_file, '-d', db]
+                    'pident', 'bitscore', '--subject-cover', '40', '-q', in_file, '-d', db]
 
             blast = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=FNULL)
             print("Aligning with "+method+"...")                
             blast_out = StringIO(blast.communicate()[0].decode('utf-8'))
-            diamond_df = pd.read_csv(blast_out, sep="\t", header=None,names=['Query','Hit','Percent ID','Bitscore'])
+            diamond_df = pd.read_csv(blast_out, sep="\t", header=None,names=['Query','Hit','Percent_ID','Bitscore'])
             diamond_df.insert(0, 'Accession', filename)
             if genloc == True:
                 if len(p) != 0: 
-                    diamond_df['Genomic Location'] = diamond_df['Query'].str.contains('|'.join(p))
-                    diamond_df['Genomic Location'] = diamond_df['Genomic Location'].replace({True:'Plasmid',False:'Chromosome'})
+                    diamond_df['Genomic_Location'] = diamond_df['Query'].str.contains('|'.join(p))
+                    diamond_df['Genomic_Location'] = diamond_df['Genomic_Location'].replace({True:'Plasmid',False:'Chromosome'})
                 else:      
-                    diamond_df['Genomic Location'] = 'Chromosome'
+                    diamond_df['Genomic_Location'] = 'Chromosome'
             return(diamond_df)
 
         def run_screen(in_file):
