@@ -4,13 +4,13 @@
 ####### SIDEROSCANNER #######
 __author__ = 'Tom Stanton (tomdstanton@gmail.com)'
 __version__ = '0.1'
-__date__ = '31.03.20'
+__date__ = '03.04.20'
 
-import os
-import subprocess
-from Bio import SeqIO
-import argparse, textwrap
+import os, shlex, requests, argparse, textwrap, subprocess
+from Bio import SeqIO, SearchIO, Entrez
 from argparse import RawTextHelpFormatter
+import pandas as pd
+from io import StringIO
 
 ### Args ###
 
@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument('--makedb', action = 'store_true', default = False,
                         help=('Setup TBDT DB and HMM profile'))
     
-    parser.add_argument('-s', '--seq', nargs='*', type = str,#default = 'prot/SGH10.faa',
+    parser.add_argument('-s', '--seq', nargs='*', type = str,
                         help=('Path to fasta input, autodetects DNA or Protein.'))
     
     parser.add_argument('-o', '--out', default='stdout', type = str,
@@ -127,36 +127,46 @@ def main():
             exit()
 
     if makedb == True:
-        if None not in (seqs, hmm, blast_only, blastx, genloc, out, annot):
+        if None not in (seqs, hmm, blast_only, blastx, genloc, out, annot, logo):
             print('''--makedb cannot be used with other arguments except
             for creating your own DB with --db''')
         else:
             def make_iromp_db():
-                def fetch(url, params, out):
-                    r = requests.get(url,params)
-                    open(out, 'wb').write(r.content)
+                def fetch(url, params):
+                    q = requests.get(url,params)
+                    return q.content
                 ### Create and process IROMP fasta file
-                sequences = []   
+                sequences = []
                 irompnames = ["iutA","fecA","fepA","cirA","iroN","fyuA","fhuA","fhuE","fiu","fatA","piuA","fptA",
-                "pirA","fiuA","hxuC","bauA","pfeA","femA","foxA", "fitA","hmuR","pfuA","oprC","fpvA","fpvB"]
+                "pirA","fiuA","hxuC","bauA","pfeA","femA","foxA", "fitA","hmuR","pfuA","oprC","fpvA","fpvB",
+                "fcuA","bfrB"]
                 for iromp in irompnames:
-                    params = {'query': 'gene:{} AND taxonomy:Gammaproteobacteria AND ' \
-                        'length:[500 TO 900] AND ' \
-                        'locations:(location:"Cell outer membrane [SL-0040]")'.format(iromp),
+                    params = {'query': 'gene_exact:{} AND name:{} AND taxonomy:Gammaproteobacteria AND ' \
+                        'length:[500 TO 900] AND locations:(location:"Cell outer membrane [SL-0040]")'.format(iromp,iromp),
                         'format': 'fasta'}
                     print("Fetching: "+iromp)
-                    fetch("http://www.uniprot.org/uniprot/", params, iromp)
-                    with open(iromp, "r") as handle:
-                        for record in SeqIO.parse(handle, "fasta"):
-                            record.id = iromp
-                            record.description = record.description.replace(record.name,'').lstrip()
-                            sequences.append(record)
-                SeqIO.write(sequences,'irompdb','fasta')
-                for iromp in irompnames: 
-                    os.remove(iromp)
+                    handle1 = fetch("http://www.uniprot.org/uniprot/", params).decode('utf-8').splitlines()
+                    records = list(SeqIO.parse(handle1, "fasta"))
+                    for r in records:
+                        r.id = iromp
+                        r.description = r.description.replace(r.name,'').lstrip()
+                        sequences.append(r)
+                ### Entrez proteins ###
+                    Entrez.email = "tomdstanton@gmail.com"
+                    handle=Entrez.esearch(db="ipg",
+                                          term='{}[Protein Name] AND gammaproteobacteria[Organism]' \
+                    'AND 500:900[Sequence Length] NOT partial'.format(iromp,iromp), retmax = 1000, idtype="acc", usehistory="y")
+                    protein_id=Entrez.read(handle)['IdList']
+                    for prid in protein_id:
+                        result = Entrez.efetch(db='ipg', id=prid, retmax = 1000, rettype='fasta', retmode='text')
+                        record = SeqIO.read(result, 'fasta')
+                        record.id = iromp
+                        sequences.append(record)
+                SeqIO.write(sequences,'irompdb','fasta') 
+                
                 ### Get TBDT HMM from PFAM
                 print("Fetching HMM")
-                fetch('https://pfam.xfam.org/family/PF00593/hmm','','iromp.hmm')
+                open('iromp.hmm', 'wb').write(fetch('https://pfam.xfam.org/family/PF00593/hmm',''))
                 cmd = ['hmmpress','iromp.hmm']
                 print("Pressing HMM")
                 subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
@@ -172,12 +182,10 @@ def main():
                 subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
                 os.remove('nr.clstr')
                 os.remove('nr')
-
             if db == 'irompdb':
-                import requests
                 make_iromp_db()
                 make_nr_db(db,db)
-                os.remove(db)
+                #os.remove(db)
             else:
                 make_nr_db(db,db)
             
@@ -185,8 +193,6 @@ def main():
         if seqs is None:
             print("Please provide at least one sequence")
             exit()
-        import pandas as pd
-        from io import StringIO
         
         def run_prodigal(in_file, out_file):
             cmd = ['prodigal','-i', in_file,'-a', out_file, '-q']
@@ -194,28 +200,37 @@ def main():
             subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
             
         def run_hmmscan(in_file, hmm):
-            from Bio import SearchIO
-            cmd = ['hmmscan','--domtblout','hmmer_out', hmm, in_file]
+            cmd = ['hmmsearch', hmm, in_file]
             print("Filtering with HMM...")
-            subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
-            accessions = []
-            for hit in SearchIO.parse('hmmer_out','hmmscan3-domtab'):
-                accessions.append(hit._id)
-            records = (r for r in SeqIO.parse(in_file,"fasta")if r.id in accessions)        
-            SeqIO.write(records,'blast_in', "fasta")
+            hmmsearch = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=FNULL)
+            hmmer_out = StringIO(hmmsearch.communicate()[0].decode('utf-8')) 
+            for record in SearchIO.parse(hmmer_out,'hmmer3-text'):
+                result = record.hit_keys
+            return result
 
-        def run_diamond(method, in_file, db, filename, p):
+        def run_diamond(method, in_file, db, filename, accessions, p):
             if annot == True:
-                cmd = ['diamond', method, '-k', '1', '--id', '80', '--outfmt', '6', 'qseqid', 'salltitles',
-                    'pident', 'bitscore', '--subject-cover', '40', '-q', in_file, '-d', db]
-
-            if annot == False:
-                cmd = ['diamond', method, '-k', '1', '--id', '80', '--outfmt', '6', 'qseqid', 'sseqid',
-                    'pident', 'bitscore', '--subject-cover', '40', '-q', in_file, '-d', db]
-
-            blast = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=FNULL)
+                hit = 'salltitles'
+            else:
+                hit = 'sseqid'
+            
+            if blast_only == False:
+                sequences = ''
+                records = list(SeqIO.parse(in_file,"fasta"))
+                for r in records:    
+                    if r.id in accessions:
+                        sequences = sequences + r.format("fasta")
+                cmd = ['diamond', method, '-k', '1', '--id', '80', '--outfmt', '6', 'qseqid',
+                       hit, 'pident', 'bitscore', '--subject-cover', '40', '-d', db]
+                blast = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=FNULL)
+                blast.stdin.write(sequences.encode())
+                blast_out = StringIO(blast.communicate()[0].decode('utf-8'))   
+            else: 
+                 cmd = ['diamond', method, '-k', '1', '--id', '80', '--outfmt', '6', 'qseqid', hit,
+                        'pident', 'bitscore', '--subject-cover', '40', '-q', in_file, '-d', db]
+                 blast = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=FNULL)
+                 blast_out = StringIO(blast.communicate()[0].decode('utf-8'))
             print("Aligning with "+method+"...")                
-            blast_out = StringIO(blast.communicate()[0].decode('utf-8'))
             diamond_df = pd.read_csv(blast_out, sep="\t", header=None,names=['Query','Hit','Percent_ID','Bitscore'])
             diamond_df.insert(0, 'Accession', filename)
             if genloc == True:
@@ -224,10 +239,9 @@ def main():
                     diamond_df['Genomic_Location'] = diamond_df['Genomic_Location'].replace({True:'Plasmid',False:'Chromosome'})
                 else:      
                     diamond_df['Genomic_Location'] = 'Chromosome'
-            return(diamond_df)
+            return diamond_df
 
         def run_screen(in_file):
-            import shlex
             p = str(os.cpu_count())
             cmd = f'blastn -query {in_file} -task megablast -db plsdb.fna -outfmt \'6 qseqid\' ' \
             f'-num_threads {p} -perc_identity 90 -max_target_seqs 5 -qcov_hsp_perc 30'
@@ -256,14 +270,14 @@ def main():
                     print("Cannot screen plasmids in protein fasta")
                 else:
                     if blast_only == True:
-                        x = run_diamond('blastp', seq, db, filename,0)
+                        x = run_diamond('blastp', seq, db, filename,0,0)
                         if out == 'stdout':
                             print(x.to_csv(sep='\t', index=False))
                         else:
                             df = df.append(x)
                     if blast_only == False:                   
-                        run_hmmscan(seq, hmm)
-                        x = run_diamond('blastp', 'blast_in', db, filename,0)
+                        accessions = run_hmmscan(seq, hmm)
+                        x = run_diamond('blastp', seq, db, filename, accessions,0)
                         if out == 'stdout':
                             print(x.to_csv(sep='\t', index=False))
                         else:
@@ -277,7 +291,7 @@ def main():
                         plasmids = run_screen(seq)
                     else:
                         plasmids = ""
-                    x = run_diamond('blastx', seq, db, filename, plasmids)
+                    x = run_diamond('blastx', seq, db, filename,0, plasmids)
                     if out == 'stdout':
                         print(x.to_csv(sep='\t', index=False))
                     else:
@@ -290,7 +304,7 @@ def main():
                         else:
                             plasmids = ""
                         run_prodigal(seq, seqname+'.faa')
-                        x = run_diamond('blastp', seqname+'.faa', db, filename, plasmids)
+                        x = run_diamond('blastp', seqname+'.faa', db, filename,0, plasmids)
                         if out == 'stdout':
                             print(x.to_csv(sep='\t', index=False))
                         else:
@@ -301,8 +315,8 @@ def main():
                         else:
                             plasmids = ""
                         run_prodigal(seq, seqname+'.faa')
-                        run_hmmscan(seqname+'.faa', hmm)
-                        x = run_diamond('blastp', 'blast_in', db, filename, plasmids)
+                        accessions = run_hmmscan(seqname+'.faa', hmm)
+                        x = run_diamond('blastp', seqname+'.faa', db, filename, accessions, plasmids)
                         if out == 'stdout':
                             print(x.to_csv(sep='\t', index=False))
                         else:
