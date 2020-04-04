@@ -4,7 +4,7 @@
 ####### SIDEROSCANNER #######
 __author__ = 'Tom Stanton (tomdstanton@gmail.com)'
 __version__ = '0.1'
-__date__ = '03.04.20'
+__date__ = '04.04.20'
 
 import os, shlex, requests, argparse, textwrap, subprocess
 from Bio import SeqIO, SearchIO, Entrez
@@ -120,7 +120,7 @@ def main():
     FNULL = open(os.devnull, 'w') # This prevents stdout.
 
     if logo == True:
-        if None not in (seqs, hmm, blast_only, blastx, genloc, out, annot, makedb):
+        if None not in (seqs, hmm, blast_only, blastx, genloc, out, annot, makedb, db):
             print('''--logo cannot be used with other arguments''')
         else:
             print_logo()
@@ -154,8 +154,9 @@ def main():
                 ### Entrez proteins ###
                     Entrez.email = "tomdstanton@gmail.com"
                     handle=Entrez.esearch(db="ipg",
-                                          term='{}[Protein Name] AND gammaproteobacteria[Organism]' \
-                    'AND 500:900[Sequence Length] NOT partial'.format(iromp,iromp), retmax = 1000, idtype="acc", usehistory="y")
+                    term = '{}[Protein Name] AND gammaproteobacteria[Organism] AND ' \
+                    '500:900[Sequence Length] NOT partial'.format(iromp),
+                    retmax = 1000, idtype="acc", usehistory="y")
                     protein_id=Entrez.read(handle)['IdList']
                     for prid in protein_id:
                         result = Entrez.efetch(db='ipg', id=prid, retmax = 1000, rettype='fasta', retmode='text')
@@ -199,7 +200,7 @@ def main():
             print("Extracting proteins...")
             subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
             
-        def run_hmmscan(in_file, hmm):
+        def run_hmmsearch(in_file, hmm):
             cmd = ['hmmsearch', hmm, in_file]
             print("Filtering with HMM...")
             hmmsearch = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=FNULL)
@@ -276,7 +277,7 @@ def main():
                         else:
                             df = df.append(x)
                     if blast_only == False:                   
-                        accessions = run_hmmscan(seq, hmm)
+                        accessions = run_hmmsearch(seq, hmm)
                         x = run_diamond('blastp', seq, db, filename, accessions,0)
                         if out == 'stdout':
                             print(x.to_csv(sep='\t', index=False))
@@ -315,7 +316,7 @@ def main():
                         else:
                             plasmids = ""
                         run_prodigal(seq, seqname+'.faa')
-                        accessions = run_hmmscan(seqname+'.faa', hmm)
+                        accessions = run_hmmsearch(seqname+'.faa', hmm)
                         x = run_diamond('blastp', seqname+'.faa', db, filename, accessions, plasmids)
                         if out == 'stdout':
                             print(x.to_csv(sep='\t', index=False))
@@ -325,11 +326,5 @@ def main():
             df.to_csv(out, index=False)
             print("Done, written to: "+out)
                 
-        ### Cleanup ###
-        junk = ['hmmer_out','blast_in']
-        for p in junk:
-            if os.path.exists(p):
-                os.remove(p)
-
 if __name__ == "__main__":
     main()
