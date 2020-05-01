@@ -1,95 +1,82 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-####### SIDEROSCANNER #######
 __author__ = 'Tom Stanton (tomdstanton@gmail.com)'
 __version__ = '0.1'
-__date__ = '15.04.20'
+__date__ = '01.05.20'
 
-import os, shlex, requests, argparse, textwrap, subprocess, re, sys
-from Bio import SeqIO, SearchIO, Entrez
+import os, requests, argparse, textwrap, subprocess, re, sys, warnings
+from Bio import SeqIO, SearchIO, BiopythonWarning
 from argparse import RawTextHelpFormatter
 import pandas as pd
 from io import StringIO
-#from Bio.Align.Applications import MuscleCommandline as muscle
+from IPython.display import display
+from Bio.SeqUtils.ProtParam import ProteinAnalysis
+
+warnings.simplefilter('ignore', BiopythonWarning)
 
 def parse_args():
     parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter,
                                      description = textwrap.dedent('''\
-        SideroScannner: A tool for accuratley annotating siderophore uptake proteins in bacteria.
+        SideroScannner: A tool for annotating IROMPs in bacteria.
 
         By Tom Stanton - Schneiders Lab - University of Edinburgh
         For queries/feedback/comments/collaborations/chat/coffee donation:
         Email: T.D.Stanton@sms.ed.ac.uk --- Github: https://github.com/tomdstanton
         
         Please note:
-            Optimising the semi-curated protein database is an ongoing process.'''))
+            Curating the IROMP HMM library is an ongoing process.'''))
     
-    parser.add_argument('--makedb', action = 'store_true', default = False,
-                        help=('Setup TBDT DB and HMM profile'))
+    parser.add_argument('-t', default=0, type = int,
+                        help=('Number of threads to use, will default to all'))
     
-    parser.add_argument('-s', '--seq', nargs='*', type = str,
-                        help=('Path to fasta input, detects DNA or Protein.'))
+    parser.add_argument('-s', nargs='*', type = str,
+                        help=('Fasta input, accepts multiple DNA or AA files.'))
     
-    parser.add_argument('-o', '--out', default='stdout', type = str,
-                        help=('Path to output (comma-separated), otherwise prints to STDOUT.'))
+    parser.add_argument('-o', default='stdout', type = str,
+                        help=('Output file (comma-separated).'))
     
-    parser.add_argument('-d', '--db', default='irompdb', type = str,
-                        help=('''Path to protein database:
-If used with --makedb, will process your own protein fasta file into a compatible DB.
-If used with scan, a diamond-formatted database is required.'''))
-                        
-    parser.add_argument('-m','--hmm', default='iromp.hmm', type = str,
-                        help=('Path to HMM profile, must be "pressed" in hmmer format.'))
+    parser.add_argument('-g', action = 'store_true', default = False,
+                        help=('Turns on chromosome/plasmid detection'))
     
-    parser.add_argument('-x', '--blastx', action = 'store_true', default = False,
-                        help=('''Perform translated alignment (protein files will default back to blastp).
-WARNING: This is the fastest option for nucleotide files but will result in fewer hits.'''))
-                              
-    parser.add_argument('-b', '--blast_only', action = 'store_true', default = False,
-                        help=('Turns off HMM pre-filter.'))
+    parser.add_argument('-f', action = 'store_true', default = False,
+                        help=('If using contigs/assemblies, scan the promoter regions of hits for Fur binding sites.'))
     
-    parser.add_argument('-a','--annot', action = 'store_true', default = False,
-                        help=('Add descriptions to hits.'))
+    parser.add_argument('-w', default='', type = str,
+                        help=('Write proteins from analysis to file.'))
     
-    parser.add_argument('-f','--fur', action = 'store_true', default = False,
-                        help=('''If using contigs/assemblies, you can scan the
-promoter regions of hits for Fur binding sites.'''))
+    parser.add_argument('-l', '--lowq', action = 'store_true', default = False,
+                        help=('Adjusts gene prediction and only plug HMM filter for low-quality assemblies.'))
     
     parser.add_argument('-p','--pwm', default='pwm', type = str,
-                        help=('''Path to meme formatted position weight matrix.
-Use with --fur'''))
+                        help=('''Path to meme formatted position weight matrix (use with --fur).'''))
     
-    parser.add_argument('-g', '--genloc', action = 'store_true', default = False,
-                        help=('''Turns on chromosome/plasmid detection: 
-Download the plsdb (https://ccb-microbe.cs.uni-saarland.de/plsdb/plasmids/download/)
-Place the blast db files in sideroscanner script directory.
-    -plsdb.fna.nsq
-    -plsdb.fna.nhr
-    -plsdb.fna.nin'''))				
+    parser.add_argument('-i', default='iromps.hmm', type = str,
+                        help=('IROMP HMM, must be "pressed" in hmmer3 format.'))
+                        
+    parser.add_argument('-d', default=['PF07715.hmm', 'PF00593.hmm'],
+                        type = list,  help=('hmmer3 formatted Plug and TonB dependent receptor domain HMMs.'))			
     
     parser.add_argument('--logo', action = 'store_true', default = False)
+    
     if len(sys.argv)==1:
         parser.print_help()
-        print('\n'+'^^^ No flags given, see help above ^^^')
+        print('\n'+'Please provide at least one argument or -h for help'+'\n')
         sys.exit(1)
     return parser.parse_args()
 
-### Globals ###
-makedb = parse_args().makedb
-db = parse_args().db
-out = parse_args().out
-seqs = parse_args().seq
-hmm = parse_args().hmm
-blast_only = parse_args().blast_only
-blastx = parse_args().blastx
-genloc = parse_args().genloc
-annot = parse_args().annot
-fur = parse_args().fur
+### Globals
+threads = parse_args().t
+out = parse_args().o
+seqs = parse_args().s
+iromps = parse_args().i
+domains = parse_args().d
+lowq = parse_args().lowq
+genloc = parse_args().g
+fur = parse_args().f
 pwm = parse_args().pwm
 logo = parse_args().logo
-FNULL = open(os.devnull, 'w') # This prevents stdout.
-p = str(os.cpu_count())
+write = parse_args().w
    
 def print_logo():
     print('''
@@ -137,241 +124,316 @@ def fetch(url, params):
     q = requests.get(url,params)
     return q.content
 
-def make_iromp_db():
-    sequences = []
-    irompnames = ["iutA","fecA","fepA","cirA","iroN","fyuA","fhuA","fhuE","fiu","fatA","piuA","fptA",
-    "pirA","fiuA","hxuC","bauA","pfeA","femA","foxA", "fitA","hmuR","pfuA","oprC","fpvA","fpvB",
-    "fcuA","btuB"]
-    for iromp in irompnames:
-        
-    ### Uniprot Proteins ###
-        # params = {'query': 'gene_exact:{} AND taxonomy:Gammaproteobacteria AND ' \
-        #     'length:[500 TO 900] AND locations:(location:"Cell outer membrane [SL-0040]")'.format(iromp,iromp),
-        #     'format': 'fasta'}
-        # print("Fetching: "+iromp)
-        # handle1 = fetch("http://www.uniprot.org/uniprot/", params).decode('utf-8').splitlines()
-        # records = list(SeqIO.parse(handle1, "fasta"))
-        # for r in records:
-        #     r.id = iromp
-        #     r.description = r.description.replace(r.name,'').lstrip()
-        #     sequences.append(r)
-
-    ### Entrez Proteins ###
-        Entrez.email = "tomdstanton@gmail.com"
-        handle=Entrez.esearch(db="ipg",
-        term = '{}[Protein Name] AND prokaryotes[filter]' \
-        '500:900[Sequence Length]'.format(iromp),
-        retmax = 10000000, idtype="acc", usehistory="y")
-        protein_id=Entrez.read(handle)['IdList']
-        for prid in protein_id:
-            result = Entrez.efetch(db='ipg', id=prid, retmax = 10000000, rettype='fasta', retmode='text')
-            record = SeqIO.read(result, 'fasta')
-            record.id = iromp
-            sequences.append(record)
-    return SeqIO.write(sequences,'irompdb','fasta') 
-                
-def make_nr_db(in_file, out_file):
-    cmd = ['cd-hit','-i',in_file,'-o','nr','-c','1','-T','0']
-    print('Removing redundancy')
-    subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
-    if out_file.endswith('.fasta'):
-        out_file = os.path.splitext(out_file)[0]
-    cmd = ['diamond','makedb','--in','nr','-d', out_file]
-    print('Building DB: '+out_file)
-    subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
-    os.remove('nr.clstr')
-    os.remove('nr')
-                    
-def run_prodigal(in_file, out_file):
-    cmd = ['prodigal','-i', in_file,'-a', out_file, '-q']
+def run_prodigal(infile, quality):
     print("Extracting proteins...")
-    return subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
+    cmd = ['prodigal','-i', infile, '-o', '/dev/null', '-a',
+           '/dev/stdout', '-q', '-p', quality]
+    prodigal = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    return prodigal.communicate()[0].decode('utf-8')
 
-def run_mast(hits, seq, in_file):
-    print("Extracting blast hit promoter sequences...")
-    blast_hits = hits['Query'].tolist()
-    records = list(SeqIO.parse(in_file,"fasta"))
-    bed_file = pd.DataFrame(columns = ["chrom", "start",
-                                       "end", "strand"])
+def run_hmmsearch(molecule, infile, cpus):
+    if molecule == 'aa':
+        cmd = ['hmmsearch', '--cut_tc', '--cpu', cpus, domains[0], infile]
+        hmmsearch = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+        hmmer_out = StringIO(hmmsearch.communicate()[0].decode('utf-8'))
+        qresult = next(SearchIO.parse(hmmer_out,'hmmer3-text'))
+        records = list(SeqIO.parse(infile,"fasta"))
+    else:
+        cmd = ['hmmsearch', '--cut_tc', '--cpu', cpus, domains[0], '-']
+        hmmsearch = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                 stdout=subprocess.PIPE)
+        hmmsearch.stdin.write(infile.encode())
+        hmmer_out = StringIO(hmmsearch.communicate()[0].decode('utf-8'))
+        qresult = next(SearchIO.parse(hmmer_out,'hmmer3-text'))
+        records = SeqIO.parse(StringIO(infile), 'fasta')
+    filter1 = ''
     for r in records:    
-        if r.id in blast_hits:
-            headers = r.description + "\n"
-            bed = re.split('\#|\s',headers.replace(' ',''))[0:4]
-            a_series = pd.Series(bed, index = bed_file.columns)
-            bed_file = bed_file.append(a_series, ignore_index=True)
-    bed_file['chrom'] = bed_file['chrom']
-    bed_file.loc[bed_file['strand'] == '1',
-                 'flank_start'] = bed_file['start'].astype(int) - 450
-    bed_file.loc[bed_file['strand'] == '1',
-                 'flank_end'] = bed_file['start'].astype(int) + 150
-    bed_file.loc[bed_file['strand'] == '-1',
-                 'flank_start'] = bed_file['end'].astype(int) -150
-    bed_file.loc[bed_file['strand'] == '-1',
-                 'flank_end'] = bed_file['end'].astype(int) + 450
+        if r.id in qresult.hit_keys:
+            filter1 = filter1 + r.format("fasta")
+    print("Filtered "+str(filter1.count('>'))+" proteins with "+domains[0])
+    if lowq == True:
+        return filter1
+    else:
+        cmd = ['hmmsearch', '--cut_tc', '--cpu', cpus, domains[1], '-']
+        hmmsearch = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                     stdout=subprocess.PIPE)
+        hmmsearch.stdin.write(filter1.encode())
+        hmmer_out = StringIO(hmmsearch.communicate()[0].decode('utf-8'))
+        qresult = next(SearchIO.parse(hmmer_out,'hmmer3-text'))
+        records = SeqIO.parse(StringIO(filter1), 'fasta')        
+        filter2 = ''
+        for r in records:    
+            if r.id in qresult.hit_keys:
+                filter2 = filter2 + r.format("fasta")
+        print("Filtered "+str(filter2.count('>'))+" proteins with "+domains[1])
+        return filter2
+
+def run_hmmscan(infile, cpus):
+    print("Scanning against HMM library...")
+    hmmscan_df = pd.DataFrame(columns = ['contig','query', 'hit', 'hit_range',
+                                         'score','evalue'])
+    cmd = ['hmmscan', '-E', '1e-50', '--cpu', cpus, iromps, '-']
+    hmmscan = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE)
+    hmmscan.stdin.write(infile.encode())
+    hmmer_out = StringIO(hmmscan.communicate()[0].decode('utf-8'))
+    for qresult in SearchIO.parse(hmmer_out, "hmmer3-text"):
+        if len(qresult.hits) > 0:
+            hmmscan_df = hmmscan_df.append(
+                {'contig':qresult._id.rsplit('_', 1)[0], 'query':qresult._id,
+                 'hit':qresult.hits[0]._id, 'score':qresult.hits[0].bitscore,
+                 'evalue':"%.3g" % qresult.hits[0].evalue, 
+                 'hit_range':str(qresult.hits[0].hsps[0].hit_range[0]) \
+                     +'-'+str(qresult.hits[0].hsps[0].hit_range[1])},
+                ignore_index = True)
+    if hmmscan_df.empty == True:
+        print("No proteins annotated")
+        return hmmscan_df    
+    else:    
+        bed_df = pd.DataFrame(columns = ['query', 'start', 'end', 'strand', 'kDa'])
+        for r in SeqIO.parse(StringIO(infile), 'fasta'):
+            bed = re.split('\#|\s', (r.description + "\n").replace(' ',''))[0:4]
+            X = ProteinAnalysis((r._seq._data.replace('*', '')))
+            bed.append(int(X.molecular_weight()))
+            bed_df = bed_df.append(pd.Series(
+                bed,index=['query', 'start', 'end', 'strand', 'kDa']),
+                ignore_index=True)
+        return pd.merge(hmmscan_df, bed_df, on = 'query')
+
+def plasmid_screen(infile, cpus, hits):
+    print("Screening for plasmids...")
+    cmd = ['blastn',
+           '-query', infile,
+           '-db', 'plsdb.fna',
+           '-culling_limit', '1',
+           '-outfmt', '6',
+           '-max_hsps', '1',
+           '-evalue', '1e-50',
+           '-num_threads',  cpus, 
+           '-perc_identity','90',
+           '-qcov_hsp_perc', '10',
+           '-max_target_seqs', '1']
+    blast = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    blast_out = StringIO(blast.communicate()[0].decode('utf-8'))
+    plasmid_df = pd.DataFrame(columns = ['contig', 'plasmid/mge', 'span'])
+    for qresult in SearchIO.parse(blast_out, "blast-tab"):
+       for h in qresult.hits:
+           plasmid_df = plasmid_df.append(
+               {'contig':h.query_id,'plasmid/mge':h.id,
+                'span':str(h.hsps[0].query_range[0])+'-'+str(h.hsps[0].query_range[1])},
+               ignore_index = True)
+    hits = hits.merge(plasmid_df, how='left')
+    if plasmid_df.empty == True:
+        print("No plasmids found")
+    return hits.fillna(value={'plasmid/mge': 'Chromosome'})
+
+def mge_screen(infile, cpus, plasmids):
+    print("Screening for MGEs...")
+    cmd = ['blastn', 
+           '-query', infile,
+           '-db', 'mge',
+           '-culling_limit', '1', 
+           '-outfmt', '6',
+           '-max_hsps', '1',
+           '-evalue', '1e-50',   
+           '-num_threads', cpus,
+           '-perc_identity', '90']
+    blast = subprocess.Popen(cmd, stdout=subprocess.PIPE)
+    blast_out = StringIO(blast.communicate()[0].decode('utf-8'))
+    mge_df = pd.DataFrame(columns = ['contig', 'plasmid/mge', 'span'])
+    for qresult in SearchIO.parse(blast_out, "blast-tab"):
+       for h in qresult.hits:
+           name = h.id.split('|')[2]
+           mge_df = mge_df.append(
+               {'contig':h.query_id,'plasmid/mge':name,
+                'span':h.hsps[0].query_range}, ignore_index = True)
+    chromosome_contigs = list(plasmids.loc[plasmids['plasmid/mge'] == 'Chromosome','contig'])
+    mge_df = mge_df[mge_df['contig'].isin(chromosome_contigs)]
+    if mge_df.empty == True:
+        print("No MGEs found")
+    else:
+        def range_subset(range1, range2):
+          if not range1:
+              return True 
+          if not range2:
+              return False
+          if len(range1) > 1 and range1.step % range2.step:
+              return False
+          return range1.start in range2 and range1[-1] in range2
+        mge_dict = dict(zip(mge_df['plasmid/mge'], mge_df['span']))
+        for row in plasmids.itertuples():
+            for key in mge_dict:
+                if range_subset(range(int(row.start), int(row.end)),
+                                 range(mge_dict[key][0], mge_dict[key][1]))==True:
+                    plasmids.at[row.Index, 'plasmid/mge'] = key
+                    plasmids.at[row.Index, 'span'] = \
+                        str(mge_dict[key][0])+'-'+str(mge_dict[key][1])
+    return plasmids
+            
+def run_mast(hits, infile):
+    print("Searching for motif hits in promoter regions...")
+    hits.loc[hits['strand'] == '1',
+                 'flank_start'] = hits['start'].astype(int) - 450
+    hits.loc[hits['strand'] == '1',
+                 'flank_end'] = hits['start'].astype(int) + 150
+    hits.loc[hits['strand'] == '-1',
+                 'flank_start'] = hits['end'].astype(int) -150
+    hits.loc[hits['strand'] == '-1',
+                 'flank_end'] = hits['end'].astype(int) + 450
     chrs = {}
-    for r in SeqIO.parse(seq, "fasta"):
+    for r in SeqIO.parse(infile, "fasta"):
         chrs[r.id] = r.seq
     promoter_reg = ''
-    for index, row in bed_file.iterrows():
-        hit_accession = row['chrom']
-        chracc = hit_accession.split('_')
-        b = "_".join(chracc[:2])
+    for index, row in hits.iterrows():
+        query = row['query']
+        chracc = row['contig']
         f_start = int(row['flank_start'])
         f_end = int(row['flank_end'])
-        flank = chrs[b][f_start:f_end]
+        flank = chrs[chracc][f_start:f_end]
         promoter_reg = promoter_reg+ \
-            '\n'+'>'+hit_accession+':'+str(f_start) \
+            '\n'+'>'+query+':'+str(f_start) \
                 +'-'+str(f_end)+'\n'+str(flank)
-    mast_in = promoter_reg.format("fasta").strip()
-    print('Performing motif alignment...')
+    promoters = promoter_reg.format("fasta").strip()
     cmd = ['mast', '-hit_list', pwm, '-']
     mast = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-    mast.stdin.write(mast_in.encode())
+    mast.stdin.write(promoters.encode())
     mast_out = StringIO(mast.communicate()[0].decode('utf-8'))   
     mast_df = pd.read_csv(mast_out, sep=" ", header=1)
-    mast_df = mast_df[:-1]
-    mast_df[['Query','flank']] = mast_df['#'].str.split(":",expand=True)
-    mast_df[['flank_start','flank_end']] = mast_df['flank'].str.split("-",expand=True)
-    mast_df = mast_df.drop(columns=['#','id','score', 'flank', 'hit_end'])
-    mast_df = mast_df.rename(columns={"sequence_name":"strand+/-",
-                            "(strand+/-)motif": "motif",
-                            "alt_id":"motif_start",
-                            "hit_start":"motif_end",
-                            "hit_p-value":"motif_p-value"})
-    return mast_df[['Query','flank_start','flank_end','motif',
-                    'strand+/-','motif_start', 'motif_end',
-                    'motif_p-value']]
-
-def run_hmmsearch(in_file):
-    cmd = ['hmmsearch', hmm, in_file]
-    print("Filtering with HMM...")
-    hmmsearch = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=FNULL)
-    hmmer_out = StringIO(hmmsearch.communicate()[0].decode('utf-8'))
-    qresult = next(SearchIO.parse(hmmer_out,'hmmer3-text'))
-    return qresult.hit_keys
-
-def run_diamond(method, in_file, filename, accessions, plasmids):
-    if annot == True:
-        hit = 'salltitles'
+    if mast_df.empty == True:
+        print("No TFBS found")
     else:
-        hit = 'sseqid'
-    if blast_only == False:
-        sequences = ''
-        records = list(SeqIO.parse(in_file,"fasta"))
-        for r in records:    
-            if r.id in accessions:
-                sequences = sequences + r.format("fasta")
-        cmd = ['diamond', method, '-k', '1', '--id', '95', '--outfmt', '6', 'qseqid',
-               hit, 'pident', 'bitscore', '--subject-cover', '40', '-d', db]
-        blast = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=FNULL)
-        blast.stdin.write(sequences.encode())
-        blast_out = StringIO(blast.communicate()[0].decode('utf-8'))   
-    else: 
-         cmd = ['diamond', method, '-k', '1', '--id', '95', '--outfmt', '6', 'qseqid', hit,
-                'pident', 'bitscore', '--subject-cover', '40', '-q', in_file, '-d', db]
-         blast = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=FNULL)
-         blast_out = StringIO(blast.communicate()[0].decode('utf-8'))
-    print("Aligning with "+method+"...")                
-    diamond_df = pd.read_csv(blast_out, sep="\t", header=None,names=['Query','Hit','Percent_ID','Bitscore'])
-    diamond_df.insert(0, 'Accession', filename)
-    if genloc == True:
-        if len(plasmids) != 0: 
-            diamond_df['Genomic_Location'] = diamond_df['Query'].str.contains('|'.join(plasmids))
-            diamond_df['Genomic_Location'] = diamond_df['Genomic_Location'].replace({True:'Plasmid',False:'Chromosome'})
-        else:      
-            diamond_df['Genomic_Location'] = 'Chromosome'
-    return diamond_df
+        mast_df = mast_df[:-1]
+        mast_df[['query','flank']] = mast_df['#'].str.split(":",expand=True)
+        mast_df[['flank_start','flank_end']] = mast_df['flank'].str.split("-",expand=True)
+        mast_df = mast_df.drop(columns=['#','id','score', 'flank', 'hit_end', 'sequence_name'])
+        mast_df = mast_df.rename(columns={"(strand+/-)motif": "motif",
+                                "alt_id":"motif_start",
+                                "hit_start":"motif_end",
+                                "hit_p-value":"motif_p-value"})
+        mast_df['motif_start'] = (mast_df['motif_start'].astype(int) + mast_df['flank_start'].astype(int)).astype(str)
+        mast_df['motif_end'] = (mast_df['motif_end'].astype(int) + mast_df['flank_start'].astype(int)).astype(str)
+        mast_df = mast_df.drop(columns=['flank_start','flank_end'])
+        hits = hits.drop(columns=['flank_start','flank_end'])
+        hits = hits.merge(mast_df, how = 'left', on = 'query')
+    return hits
 
-def run_screen(in_file):
-    cmd = f'blastn -query {in_file} -task megablast -db plsdb.fna -outfmt \'6 qseqid\' ' \
-    f'-num_threads {p} -perc_identity 90 -max_target_seqs 5 -qcov_hsp_perc 30'
-    print("Screening for plasmids...")
-    screen = subprocess.Popen(shlex.split(cmd), stdout=subprocess.PIPE, stderr=FNULL)
-    plasmids = screen.stdout.read().decode("utf-8").splitlines()
-    plasmids = list(dict.fromkeys(plasmids))
-    plasmid_number = len(plasmids)
-    if plasmid_number == 0:
-        print("No plasmids found")
-    return plasmids
-
-#def run_muscle():
-            
+def grab_proteins(infile, hits, path):
+    to_write = []
+    records = SeqIO.parse(StringIO(infile), 'fasta')
+    for r in records:    
+        write_df = hits[hits['query'].str.match(r.id)]
+        r.id = write_df['sample'].values[0]+'_'+write_df['contig'].values[0]+'_'+write_df['hit'].values[0]
+        r.description = ''
+        to_write.append(r)
+    SeqIO.write(to_write, path, "fasta")
+                          
 def main():
+    ### Logo ###
     if logo == True:
-        if None not in (seqs, hmm, blast_only, blastx, genloc, out, annot, makedb, db):
-            print('''--logo cannot be used with other arguments''')
-        else:
-            print_logo()
-            sys.exit(1)
-
-    if makedb == True:
-        if None not in (seqs, hmm, blast_only, blastx, genloc, out, annot, logo):
-            print('''--makedb cannot be used with other arguments except
-            for creating your own DB with --db''')
-            sys.exit(1)
-        if db == 'irompdb':
-            make_iromp_db()
-            make_nr_db(db,db)
-            #os.remove(db)
-        else:
-            make_nr_db(db,db)
-        print("Fetching HMM")
-        open('iromp.hmm', 'wb').write(fetch('https://pfam.xfam.org/family/PF00593/hmm',''))
-        cmd = ['hmmpress','iromp.hmm']
-        print("Pressing HMM")
-        subprocess.run(cmd, stdout=FNULL, stderr=subprocess.STDOUT)
-
-    if makedb == False:
-        if len(seqs) == 0:
-            print("Please provide at least one sequence with -s")
-            sys.exit(1)
-        print('Using '+p+' cores...' )
-        if out != 'stdout':
-            df = pd.DataFrame()
-
-        for seq in seqs:
-            # Test to see if DNA or AA input
+        print_logo()
+        
+    ### Run Scan ###
+    # Some failsafes
+    if seqs is None:
+        print('Please provide at least one sequence with -s')
+        sys.exit(1)
+    cpus = str(threads)
+    if threads == 0:
+        cpus = str(os.cpu_count())
+    if threads > os.cpu_count():
+        print('Number of threads exceeds available CPUs, ' \
+          'defaulting to maximum available CPUs')
+        cpus = str(os.cpu_count())
+    print('Using '+cpus+' threads...')
+    if out != 'stdout':
+        df = pd.DataFrame()
+    
+    # Loop over each input file
+    for seq in seqs:      
+        # Check if input is empty
+        if os.path.getsize(seq) <= 10:
+            print(seq+" is empty, skipping...")
+            continue
+        
+        # Check molecule type and restrictions
+        try:
             test = next(SeqIO.parse(seq,"fasta"))
-            filename = os.path.splitext(os.path.basename(seq))[0]
-            accessions = ''
-            plasmids = ''
+            pass
+        except:
+            print(seq+" is not a fasta file, skipping...")
+            continue
+        
+        if "E" in test._seq._data:
+            molecule = 'aa'
+            print(os.path.splitext(os.path.basename(seq))[0]+
+                  ': protein input detected')
+        else:
+            molecule = 'dna'
+            print(os.path.splitext(os.path.basename(seq))[0]+
+                  ": DNA input detected")
+        
+        # If DNA input, get proteins
+        if molecule == 'dna':
+            quality = 'single'
+            small_contig_list = []
+            for r in SeqIO.parse(seq, format = "fasta"):
+                if len(r.seq) < 10000:
+                    small_contig_list.append(r.id)
+            if len(small_contig_list) > 0:
+                print(str(len(small_contig_list))+' contig(s) are < 10kbp')
+                quality = 'meta'
             
-            # Protein input
-            if "E" in test._seq._data:
-                print("Protein fasta detected: "+filename)                   
-                if genloc == True:
-                    print("Cannot screen plasmids in protein fasta")
-                    sys.exit(1)
-                if fur == True:
-                    print("Cannot screen TFBS in protein fasta")
-                    sys.exit(1) 
-                if blast_only == False:                   
-                    accessions = run_hmmsearch(seq)
-                x = run_diamond('blastp', seq, filename, accessions, 0)
+            if len([1 for line in open(seq) if line.startswith(">")]) > 1000:
+                print(os.path.splitext(os.path.basename(seq))[0]+' has < 1000 contigs')
+                quality = 'meta'
+            
+            if lowq == True:
+                quality = 'meta'
+            
+            if quality == 'meta':
+                print('Switching Prodigal to anonymous mode')
                 
-            # DNA input
-            if "E" not in test._seq._data:
-                print("Nucleotide fasta detected: "+filename)
-                seqname = os.path.splitext(seq)[0]
-                if genloc == True:
-                    plasmids = run_screen(seq)
-                if blastx == True:
-                    x = run_diamond('blastx', seq, filename, accessions, plasmids)
-                else:
-                    run_prodigal(seq, seqname+'.faa')
-                    if blast_only == False:
-                        accessions = run_hmmsearch(seqname+'.faa')
-                    x = run_diamond('blastp', seqname+'.faa', filename, accessions, plasmids)
-                if fur == True:                    
-                    x = pd.merge(x, run_mast(x, seq, seqname+'.faa'), on='Query')
- 
-            if out == 'stdout':
-                print(x.to_csv(sep='\t', index=False))
+            proteins = run_prodigal(seq, quality)
+        else: proteins = seq
+        
+        # Filter by domain, also shrinks fasta in memory                 
+        proteins = run_hmmsearch(molecule, proteins, cpus)
+        hits = run_hmmscan(proteins, cpus)
+        if hits.empty == True:
+            continue
+        
+        if genloc == True:
+            if molecule == 'aa':
+                print("Cannot screen plasmids in protein fasta")
             else:
-                df = df.append(x)
-        if out != 'stdout':
-            df.to_csv(out, index=False)
-            print("Done, written to: "+out)
+                hits = plasmid_screen(seq, cpus, hits)
+                hits = mge_screen(seq, cpus, hits)
+                    
+        if fur == True:
+            if molecule == 'aa':
+                print("Cannot screen TFBS in protein fasta")
+            else:
+                hits = run_mast(hits, seq)
+        
+        hits.insert(0, 'sample', os.path.splitext(os.path.basename(seq))[0])
+        
+        if len(write) > 0:
+            grab_proteins(proteins, hits, write)
+        
+        # Tidying up...
+        hits = hits.set_index('sample')
+        hits = hits.fillna(value = '-')    
+         
+        if out == 'stdout':
+            display(hits)
+            print('\n')
+        else:
+            df = df.append(hits)
+
+    if out != 'stdout':
+        df = df.fillna(value = '-')
+        df.to_csv(out)
+        print("Done, written to: "+out)
 
 if __name__ == "__main__":
     main()
