@@ -34,28 +34,28 @@ def parse_args():
                         help=('Fasta input, accepts multiple DNA or AA files.'))
     
     parser.add_argument('-o', default='stdout', type = str,
-                        help=('Output file (comma-separated).'))
+                        help=('Output file (comma-separated)'))
     
     parser.add_argument('-g', action = 'store_true', default = False,
                         help=('Turns on chromosome/plasmid detection'))
     
     parser.add_argument('-f', action = 'store_true', default = False,
-                        help=('If using contigs/assemblies, scan the promoter regions of hits for Fur binding sites.'))
+                        help=('If using contigs/assemblies, scan the promoter regions of hits for Fur binding sites'))
     
     parser.add_argument('-w', default='', type = str,
-                        help=('Write proteins from analysis to file.'))
+                        help=('Write proteins from analysis to file. Use "seq" for default filename'))
     
-    parser.add_argument('-l', '--lowq', action = 'store_true', default = False,
-                        help=('Adjusts gene prediction and only plug HMM filter for low-quality assemblies.'))
+    parser.add_argument('-l', action = 'store_true', default = False,
+                        help=('Adjusts gene prediction and only plug HMM filter for low-quality assemblies'))
     
     parser.add_argument('-p','--pwm', default='pwm', type = str,
-                        help=('''Path to meme formatted position weight matrix (use with --fur).'''))
+                        help=('Path to meme formatted position weight matrix (use with --fur)'))
     
     parser.add_argument('-i', default='iromps.hmm', type = str,
-                        help=('IROMP HMM, must be "pressed" in hmmer3 format.'))
+                        help=('IROMP HMM, must be "pressed" in hmmer3 format'))
                         
     parser.add_argument('-d', default=['PF07715.hmm', 'PF00593.hmm'],
-                        type = list,  help=('hmmer3 formatted Plug and TonB dependent receptor domain HMMs.'))			
+                        type = list,  help=('hmmer3 formatted Plug and TonB dependent receptor domain HMMs'))			
     
     parser.add_argument('--logo', action = 'store_true', default = False)
     
@@ -71,7 +71,7 @@ out = parse_args().o
 seqs = parse_args().s
 iromps = parse_args().i
 domains = parse_args().d
-lowq = parse_args().lowq
+lowq = parse_args().l
 genloc = parse_args().g
 fur = parse_args().f
 pwm = parse_args().pwm
@@ -131,7 +131,7 @@ def run_prodigal(infile, quality):
     prodigal = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     return prodigal.communicate()[0].decode('utf-8')
 
-def run_hmmsearch(molecule, infile, cpus):
+def run_hmmsearch(molecule, infile, cpus, quality):
     if molecule == 'aa':
         cmd = ['hmmsearch', '--cut_tc', '--cpu', cpus, domains[0], infile]
         hmmsearch = subprocess.Popen(cmd, stdout=subprocess.PIPE)
@@ -151,7 +151,7 @@ def run_hmmsearch(molecule, infile, cpus):
         if r.id in qresult.hit_keys:
             filter1 = filter1 + r.format("fasta")
     print("Filtered "+str(filter1.count('>'))+" proteins with "+domains[0])
-    if lowq == True:
+    if quality == 'meta' or len(filter1) == 0:
         return filter1
     else:
         cmd = ['hmmsearch', '--cut_tc', '--cpu', cpus, domains[1], '-']
@@ -168,7 +168,7 @@ def run_hmmsearch(molecule, infile, cpus):
         print("Filtered "+str(filter2.count('>'))+" proteins with "+domains[1])
         return filter2
 
-def run_hmmscan(infile, cpus):
+def run_hmmscan(infile, cpus, molecule):
     print("Scanning against HMM library...")
     hmmscan_df = pd.DataFrame(columns = ['contig','query', 'hit', 'hit_range',
                                          'score','evalue'])
@@ -188,15 +188,23 @@ def run_hmmscan(infile, cpus):
                 ignore_index = True)
     if hmmscan_df.empty == True:
         print("No proteins annotated")
-        return hmmscan_df    
+        return hmmscan_df
+    
+    weight_df = pd.DataFrame(columns = ['query','mass(Da)'])
+    for r in SeqIO.parse(StringIO(infile), 'fasta'):
+        X = ProteinAnalysis((r._seq._data.replace('*', '')))
+        weight_df = weight_df.append({
+            'query':r.id, 'mass(Da)':int(X.molecular_weight())},
+            ignore_index = True)
+    hmmscan_df = hmmscan_df.merge(weight_df, on = 'query', how = 'left')
+    if molecule == 'aa':
+        return hmmscan_df
     else:    
-        bed_df = pd.DataFrame(columns = ['query', 'start', 'end', 'strand', 'kDa'])
+        bed_df = pd.DataFrame(columns = ['query', 'start', 'end', 'strand'])
         for r in SeqIO.parse(StringIO(infile), 'fasta'):
             bed = re.split('\#|\s', (r.description + "\n").replace(' ',''))[0:4]
-            X = ProteinAnalysis((r._seq._data.replace('*', '')))
-            bed.append(int(X.molecular_weight()))
             bed_df = bed_df.append(pd.Series(
-                bed,index=['query', 'start', 'end', 'strand', 'kDa']),
+                bed,index=['query', 'start', 'end', 'strand']),
                 ignore_index=True)
         return pd.merge(hmmscan_df, bed_df, on = 'query')
 
@@ -271,7 +279,7 @@ def mge_screen(infile, cpus, plasmids):
     return plasmids
             
 def run_mast(hits, infile):
-    print("Searching for motif hits in promoter regions...")
+    print('Searching for motif hits in promoter regions...')
     hits.loc[hits['strand'] == '1',
                  'flank_start'] = hits['start'].astype(int) - 450
     hits.loc[hits['strand'] == '1',
@@ -295,12 +303,13 @@ def run_mast(hits, infile):
                 +'-'+str(f_end)+'\n'+str(flank)
     promoters = promoter_reg.format("fasta").strip()
     cmd = ['mast', '-hit_list', pwm, '-']
-    mast = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+    mast = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
     mast.stdin.write(promoters.encode())
     mast_out = StringIO(mast.communicate()[0].decode('utf-8'))   
     mast_df = pd.read_csv(mast_out, sep=" ", header=1)
     if mast_df.empty == True:
         print("No TFBS found")
+        return hits.drop(columns=['flank_start','flank_end'])
     else:
         mast_df = mast_df[:-1]
         mast_df[['query','flank']] = mast_df['#'].str.split(":",expand=True)
@@ -315,17 +324,23 @@ def run_mast(hits, infile):
         mast_df = mast_df.drop(columns=['flank_start','flank_end'])
         hits = hits.drop(columns=['flank_start','flank_end'])
         hits = hits.merge(mast_df, how = 'left', on = 'query')
-    return hits
+        return hits
 
-def grab_proteins(infile, hits, path):
+def grab_proteins(infile, hits, path, seq):
     to_write = []
-    records = SeqIO.parse(StringIO(infile), 'fasta')
-    for r in records:    
-        write_df = hits[hits['query'].str.match(r.id)]
-        r.id = write_df['sample'].values[0]+'_'+write_df['contig'].values[0]+'_'+write_df['hit'].values[0]
-        r.description = ''
-        to_write.append(r)
-    SeqIO.write(to_write, path, "fasta")
+    try:
+        records = SeqIO.parse(StringIO(infile), 'fasta')
+        for r in records:    
+            write_df = hits[hits['query'].str.match(r.id)]
+            r.id = write_df['query'].values[0]+'_'+write_df['hit'].values[0]
+            r.description = ''
+            to_write.append(r)
+        if path == "seq":
+            path = str(os.path.splitext(os.path.basename(seq))[0])+"_ss.faa"
+        SeqIO.write(to_write, path, "fasta")
+        print("Proteins written to: "+path)
+    except:
+        print("Error writing proteins to file!")
                           
 def main():
     ### Logo ###
@@ -351,8 +366,14 @@ def main():
     # Loop over each input file
     for seq in seqs:      
         # Check if input is empty
+        if os.path.isfile(seq) == False:
+            print("No such file: "+seq)
+            print()
+            continue
+
         if os.path.getsize(seq) <= 10:
             print(seq+" is empty, skipping...")
+            print()
             continue
         
         # Check molecule type and restrictions
@@ -361,6 +382,7 @@ def main():
             pass
         except:
             print(seq+" is not a fasta file, skipping...")
+            print()
             continue
         
         if "E" in test._seq._data:
@@ -373,18 +395,18 @@ def main():
                   ": DNA input detected")
         
         # If DNA input, get proteins
+        quality = 'single'
         if molecule == 'dna':
-            quality = 'single'
             small_contig_list = []
             for r in SeqIO.parse(seq, format = "fasta"):
                 if len(r.seq) < 10000:
                     small_contig_list.append(r.id)
-            if len(small_contig_list) > 0:
-                print(str(len(small_contig_list))+' contig(s) are < 10kbp')
+            if len(small_contig_list) > 50:
+                print(str(len(small_contig_list))+' contigs are < 10kbp')
                 quality = 'meta'
             
-            if len([1 for line in open(seq) if line.startswith(">")]) > 1000:
-                print(os.path.splitext(os.path.basename(seq))[0]+' has < 1000 contigs')
+            if len([1 for line in open(seq) if line.startswith(">")]) >= 1000:
+                print(os.path.splitext(os.path.basename(seq))[0]+' has >= 1000 contigs')
                 quality = 'meta'
             
             if lowq == True:
@@ -394,11 +416,19 @@ def main():
                 print('Switching Prodigal to anonymous mode')
                 
             proteins = run_prodigal(seq, quality)
+            if len(proteins) == 0:
+                print("No CDS found")
+                print()
+                continue
         else: proteins = seq
         
         # Filter by domain, also shrinks fasta in memory                 
-        proteins = run_hmmsearch(molecule, proteins, cpus)
-        hits = run_hmmscan(proteins, cpus)
+        proteins = run_hmmsearch(molecule, proteins, cpus, quality)
+        if len(proteins) == 0:
+            print("No TonB-dependent receptors found")
+            print()
+            continue
+        hits = run_hmmscan(proteins, cpus, molecule)
         if hits.empty == True:
             continue
         
@@ -415,18 +445,18 @@ def main():
             else:
                 hits = run_mast(hits, seq)
         
-        hits.insert(0, 'sample', os.path.splitext(os.path.basename(seq))[0])
-        
         if len(write) > 0:
-            grab_proteins(proteins, hits, write)
+            grab_proteins(proteins, hits, write, seq)
         
-        # Tidying up...
-        hits = hits.set_index('sample')
-        hits = hits.fillna(value = '-')    
+        # Tidying up
+        hits = hits.drop(columns=['contig'])
+        hits.insert(0, 'sample', os.path.splitext(os.path.basename(seq))[0])
+        hits = hits.fillna(value = '-')
+        hits = hits.set_index('sample') 
          
         if out == 'stdout':
             display(hits)
-            print('\n')
+            print()
         else:
             df = df.append(hits)
 
