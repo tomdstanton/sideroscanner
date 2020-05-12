@@ -369,7 +369,7 @@ def main():
         sys.exit(1)
 
     print(__title__+': '+__version__)
-    print('System: '+os.uname()[0])
+    print('Your system is '+os.uname()[0])
     print(datetime.today().strftime('%Y-%m-%d-%H:%M:%S'))
 
     if parse_args().threads > os.cpu_count():
