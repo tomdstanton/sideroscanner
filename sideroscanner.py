@@ -7,11 +7,10 @@ __author__ = 'Tom Stanton'
 import argparse
 import os
 import re
-import requests
 import sys
 import textwrap
 import warnings
-from shutil import which
+from shutil import which, get_terminal_size
 from subprocess import Popen, PIPE, DEVNULL
 from argparse import RawTextHelpFormatter
 from datetime import datetime
@@ -39,7 +38,7 @@ def parse_args():
     parser.add_argument('-t', '--threads', type=int, default=os.cpu_count(),
                         help='Number of threads to use, (default: '+str(os.cpu_count())+')')
 
-    parser.add_argument('-i', '--input', nargs='*', type=str,  #required=True,
+    parser.add_argument('-i', '--input', nargs='*', type=str,  required=True,
                         help='Path to fasta input, accepts multiple DNA or AA files.')
 
     parser.add_argument('-o', '--out', nargs='?', type=str,
@@ -73,27 +72,33 @@ Provide a list of filenames this applies to  - (default: all inputs)''')
                         help='''Path to IROMP HMM library
 Must be "pressed" in hmmer3 format - (default: iromps.hmm)''')
 
-    parser.add_argument('--dbpath', type=str, default=os.getcwd(),
-                        help='''Path to blast databases for
-plasmid, MGE and flanking VF screens (default: '''+os.getcwd()+')')
+    parser.add_argument('--dbpath', type=str, default=sys.path[0],
+                        help='''Path to blast databases for plasmid, MGE and flanking VF screens
+(default: '''+os.getcwd()+')')
 
-    # if len(sys.argv)==1:
-    #     parser.print_help()
-    #     print('\n'+'Please provide at least one argument or -h for help'+'\n')
-    #     sys.exit(1)
+    if len(sys.argv)==1:
+        parser.print_help()
+        print('\n'+'Please provide at least one argument or -h for help'+'\n')
+        sys.exit(1)
     return parser.parse_args()
-
-
-def fetch(url):
-    q = requests.get(url)
-    return q.content
 
 def is_tool(name):
     """Check whether `name` is on PATH and marked as executable."""
     return which(name) is not None
 
 # def prepare_dbs():
-#     vfdb = fetch('http://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas.gz')
+#     def download(url):
+#         out_file_path = url.split("/")[-1][:-3]
+#         print('Downloading SEED Database from: {}'.format(url))
+#         response = urllib2.urlopen(url)
+#         compressed_file = StringIO.StringIO(response.read())
+#         decompressed_file = gzip.GzipFile(fileobj=compressed_file)
+#         with open(out_file_path, 'w') as outfile:
+#             outfile.write(decompressed_file.read())
+#         return
+#     vfdb = download('http://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas.gz')
+#
+#
 #     ices = http://202.120.12.136/ICEberg2/download/ICE_seq_all.fas
 #     t4ss = http://202.120.12.136/ICEberg2/download/T4SS-type_ICE_seq_all.fas
 #     aices = http://202.120.12.136/ICEberg2/download/AICE_seq_all.fas
@@ -101,6 +106,15 @@ def is_tool(name):
 #     cimes = http://202.120.12.136/ICEberg2/download/CIME_seq_all.fas
 #     plsdb = https://ccb-microbe.cs.uni-saarland.de/plsdb/plasmids/download/?zip
 #     ["makeblastdb -in VFDB_setB_pro.fas -dbtype 'prot' -out vfdb"]
+#
+#     handle1 = fetch("http://www.uniprot.org/uniprot/", params).decode('utf-8').splitlines()
+#     records = list(SeqIO.parse(handle1, "fasta"))
+#     for r in records:
+#         r.id = iromp
+#         r.description = r.description.replace(r.name,'').lstrip()
+#         sequences.append(r)
+#     import gzip
+    
 
 
 def run_prodigal(infile, quality):
@@ -111,7 +125,7 @@ def run_prodigal(infile, quality):
     return prodigal.communicate()[0].decode('utf-8')
 
 
-def run_hmmsearch(molecule, infile, cpus, quality):
+def run_hmmsearch(molecule, infile, cpus, qual):
     if molecule == 'aa':
         cmd = ['hmmsearch', '--cut_tc', '--cpu', cpus,
                parse_args().dbpath+'/PF07715.hmm', infile]
@@ -132,7 +146,7 @@ def run_hmmsearch(molecule, infile, cpus, quality):
         if r.id in qresult.hit_keys:
             filter1 = filter1 + r.format("fasta")
     print('Filtered '+str(filter1.count('>'))+' proteins with PF07715.hmm')
-    if quality == 'meta' or len(filter1) == 0:
+    if qual == 'meta' or len(filter1) == 0:
         return filter1
     else:
         cmd = ['hmmsearch', '--cut_tc', '--cpu', cpus,
@@ -273,7 +287,7 @@ def flank_screen(infile, cpus, hits, cds):
                         flanking_cds = flanking_cds + '>' + str(r.id) + ' downstream '+ str(i+1) + '\n' + str(rec.seq) + '\n'
     print('Screening '+str(cds)+' upstream and downstream CDS...')
     cmd = ['blastp',
-           '-db', parse_args().dbpath+'/vfdb',
+           '-db', parse_args().dbpath+'/flankdb',
            '-outfmt', '5',
            '-max_hsps', '1',
            '-evalue', '1e-130',
@@ -343,7 +357,6 @@ def run_mast(hits, pwm, infile):
 def grab_proteins(infile, hits, seq):
     to_write = []
     for r in SeqIO.parse(StringIO(infile), 'fasta'):
-        
         if r.id in hits['query'].values:
             write_df = hits[hits['query'].str.match(r.id)]
             r.id = write_df['query'].values[0] + '_' + write_df['hit'].values[0]
@@ -358,7 +371,7 @@ def grab_proteins(infile, hits, seq):
 
 
 def main():
-    print('__________________________________________')
+    print('-'*int(get_terminal_size()[0]))
     for d in ['hmmscan', 'hmmsearch', 'blastp', 'blastn', 'prodigal', 'mast']:
         if is_tool(d) == False:
             print('ERROR: '+d+' not found')
@@ -384,7 +397,7 @@ def main():
 
     # Loop over each input file
     for seq in parse_args().input:
-        print('__________________________________________')
+        print('-'*int(get_terminal_size()[0]))
         if not os.path.isfile(seq):
             print("No such file: " + seq)
             continue
@@ -408,8 +421,8 @@ def main():
             print('DNA input detected: '+os.path.splitext(os.path.basename(seq))[0])
 
         # If DNA input, get proteins
+        quality = 'single'
         if molecule == 'dna':
-            quality = 'single'
             small_contig_list = []
             for r in SeqIO.parse(seq, format="fasta"):
                 if len(r.seq) < 10000:
