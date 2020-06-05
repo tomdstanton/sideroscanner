@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-__title__ = 'SideroScanner'
+__title__ = 'sideroscanner'
 __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
@@ -11,7 +11,7 @@ import re
 import sys
 import zipfile
 import warnings
-from numpy import where
+#from numpy import where
 from shutil import which, get_terminal_size
 from subprocess import Popen, PIPE, DEVNULL, run
 from argparse import RawTextHelpFormatter
@@ -26,68 +26,64 @@ warnings.simplefilter('ignore', BiopythonWarning) #Turn off annoying warnings
 
 ### Arguments ###
 def parse_args():
-    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter,
+    parser = argparse.ArgumentParser(add_help=False,
+                                     formatter_class=RawTextHelpFormatter,
+                                     usage="./sideroscanner.py [options]",
                                      description='''
-        SideroScannner: A tool for annotating IROMPs in bacteria.
-        - Tom Stanton (Schneiders Lab - University of Edinburgh)
-        - Email: T.D.Stanton@sms.ed.ac.uk
-        - Github: https://github.com/tomdstanton''')
+        sideroscannner: a tool for annotating IROMPs in bacteria
+        ========================================================''')
+    group = parser.add_argument_group("Options")
 
-    parser.add_argument('-i', metavar='-', nargs='*', type=str,
-                        help='''Path/to/input/fasta
-                        ''')
-
-    parser.add_argument('-o', metavar='-', nargs='?', type=str,
-                        const='SideroScanner_' + datetime.now().strftime("%d%m%y_%H%M") + '.csv',
-                        help='''Save output as CSV instead of STDOUT
-    -optional: Path/to/output/file
-    -default: SideroScanner_DDMMYY_hhmm.csv
-        ''')
-
-    parser.add_argument('-l', metavar='int', nargs='?', type=str, const='90',
-                        help='''Determine genomic (l)ocation of hits
+    group.add_argument('-i', metavar='-', nargs='*', type=str,
+                        help='''path/to/(i)nput/fasta
+-----------------------------------------------''')
+    group.add_argument('-o', metavar='-', nargs='?', type=str,
+                        const='sideroscanner_' + datetime.now().strftime("%d%m%y_%H%M") + '.csv',
+                        help='''(o)utput file.csv instead of STDOUT
+    -optional: path/to/(o)utput/file
+    [default: sideroscanner_DDMMYY_hhmm.csv]
+-----------------------------------------------''')
+    group.add_argument('-l', metavar='int', nargs='?', type=str, const='90',
+                        help='''determine genomic (l)ocation of hits
     -optional: blastn percid
-    -default: 90
-        ''')
-
-    parser.add_argument('-f', metavar='int', nargs='?', type=int, const=3,
-                        help='''(F)lanking CDS screen
-    -optional: Specifiy number of flanking CDS
-    -default: 3
-        ''')
-
-#     parser.add_argument('--tfbs', nargs='?', type=str, const='pwm',
+    [default: 90]
+-----------------------------------------------''')
+    group.add_argument('-f', metavar='int', nargs='?', type=int, const=3,
+                        help='''(f)lanking CDS screen
+    -optional: number of upstream/donwstream CDS
+    [default: 3]
+-----------------------------------------------''')
+#     group.add_argument('--tfbs', nargs='?', type=str, const='pwm',
 #                         '''If using contigs/assemblies,
 #                         scan the promoter regions of hits for TFBS using MAST
 #                         Provide a custom PSSM in meme format - (default: Fur pwm)'''))
-
-    parser.add_argument('-e', metavar='-', nargs='?', type=str,
+    group.add_argument('-e', metavar='-', nargs='?', type=str,
                         const='seq',
-                        help='''(E)xport annotated proteins to fasta
-    -optional: Path/to/export/fasta
-    -default: [-i]_SideroScanner.faa
-        ''')
-        
-    parser.add_argument('-t', metavar='int', type=int, default=os.cpu_count(),
-                       help='''Number of threads to use
-    -default: max available
-    ''')
-
-    parser.add_argument('--lowqual', metavar='-', nargs='?', type=str, const='',
-                        help='''(1) Meta gene prediction AND (2) Filters with plug domain only
-    -optional: Path/to/low/quality/input/fasta
-    -default: all inputs
-        ''')
-
-    parser.add_argument('--lib', metavar='hmm', type=str, default=sys.path[0] + '/databases/iromps.hmm',
-                        help='''Path/to/custom/HMM
-    -default: ''' + sys.path[0] + '''/databases/iromps.hmm
-                        ''')
-
-    parser.add_argument('--dbpath', metavar='path', type=str, default=sys.path[0] + '/databases/',
-                        help='''Path/to/db/
-    -default: ''' + sys.path[0] + '''/databases/
-                        ''')
+                        help='''(e)xport annotated proteins
+    -optional: path/to/export/fasta
+    [default: [-i]_sideroscanner.faa]
+-----------------------------------------------''')
+    group.add_argument('-t', metavar='int', type=int, default=os.cpu_count(),
+                       help='''number of (t)hreads to use
+    [default: max available]
+-----------------------------------------------''')
+    group.add_argument('--lowqual', metavar='-', nargs='?', type=str, const='',
+                        help='''(1) 'meta' CDS prediction AND (2) filters with plug domain only
+    -optional: path/to/(low)/(qual)ity/input/fasta
+    [default: all inputs]
+-----------------------------------------------''')
+    group.add_argument('--lib', metavar='hmm', type=str, default=sys.path[0] + '/databases/iromps.hmm',
+                        help='''path/to/custom/HMM
+    [default: ''' + sys.path[0] + '''/databases/iromps.hmm]
+-----------------------------------------------''')
+    group.add_argument('--dbpath', metavar='path', type=str, default=sys.path[0] + '/databases/',
+                        help='''path/to/db/
+    [default: ''' + sys.path[0] + '''/databases/]
+-----------------------------------------------''')
+    group.add_argument('-v', action='store_true',
+                       help='''show version and exit
+-----------------------------------------------''')
+    group.add_argument("-h", action="help", help='''show this help message and exit''')
 
     # if len(sys.argv)==1:
     #     parser.print_help()
@@ -164,14 +160,14 @@ def run_prodigal(infile, quality):
 def run_hmmsearch(molecule, infile, cpus, qual):
     if molecule == 'aa':
         cmd = ['hmmsearch', '--cut_tc', '--cpu', cpus,
-               parse_args().dbpath + '/PF07715.hmm', infile]
+               dbpath + '/PF07715.hmm', infile]
         hmmsearch = Popen(cmd, stdout=PIPE)
         hmmer_out = StringIO(hmmsearch.communicate()[0].decode('utf-8'))
         q = next(SearchIO.parse(hmmer_out, 'hmmer3-text'))
         records = list(SeqIO.parse(infile, "fasta"))
     else:
         cmd = ['hmmsearch', '--cut_tc', '--cpu', cpus,
-               parse_args().dbpath + '/PF07715.hmm', '-']
+               dbpath + '/PF07715.hmm', '-']
         hmmsearch = Popen(cmd, stdout=PIPE, stdin=PIPE)
         hmmsearch.stdin.write(infile.encode())
         hmmer_out = StringIO(hmmsearch.communicate()[0].decode('utf-8'))
@@ -186,7 +182,7 @@ def run_hmmsearch(molecule, infile, cpus, qual):
         return filter1
     else:
         cmd = ['hmmsearch', '--cut_tc', '--cpu', cpus,
-               parse_args().dbpath + '/PF00593.hmm', '-']
+               dbpath + '/PF00593.hmm', '-']
         hmmsearch = Popen(cmd, stdin=PIPE,
                           stdout=PIPE)
         hmmsearch.stdin.write(filter1.encode())
@@ -203,7 +199,7 @@ def run_hmmsearch(molecule, infile, cpus, qual):
 
 def run_hmmscan(infile, cpus, molecule):
     print("Scanning against HMM library...")
-    hmmscan_df = pd.DataFrame(columns=['contig', 'query', 'hit', 'hit_range',
+    hmmscan_df = pd.DataFrame(columns=['contig', 'query', 'hit', #'hit_range',
                                        'score', 'evalue'])
     cmd = ['hmmscan', '-E', '1e-50', '--cpu', cpus, lib, '-']
     hmmscan = Popen(cmd, stdin=PIPE, stdout=PIPE)
@@ -214,19 +210,25 @@ def run_hmmscan(infile, cpus, molecule):
             hmmscan_df = hmmscan_df.append(
                 {'contig': q._id.rsplit('_', 1)[0], 'query': q._id,
                  'hit': q.hits[0]._id, 'score': q.hits[0].bitscore,
-                 'evalue': "%.3g" % q.hits[0].evalue,
-                 'hit_range': str(q.hits[0].hsps[0].hit_range[0]) \
-                              + '-' + str(q.hits[0].hsps[0].hit_range[1])},
+                 'evalue': "%.3g" % q.hits[0].evalue #,
+                 #'hit_range': str(q.hits[0].hsps[0].hit_range[0]) \
+                 #             + '-' + str(q.hits[0].hsps[0].hit_range[1])
+                 },
                 ignore_index=True)
     if hmmscan_df.empty == True:
         print("No proteins annotated")
         return hmmscan_df
-    weight_df = pd.DataFrame(columns=['query', 'mass(kDa)'])
+    len_mass_df = pd.DataFrame(columns=['query','len', 'mass(kDa)'])
     for r in SeqIO.parse(StringIO(infile), 'fasta'):
+        L = len(r._seq._data)
+        if '00' not in re.search(r'partial=(.*);start_type', r.description).group():
+            L = str(L)+'-partial'
         X = ProteinAnalysis((r._seq._data.replace('*', '')))
-        weight_df = weight_df.append({'query': r.id, 'mass(kDa)': round((X.molecular_weight() / 1000), 1)},
+        len_mass_df = len_mass_df.append({'query': r.id,
+                                          'len': L,
+                                          'mass(kDa)': round((X.molecular_weight() / 1000), 1)},
                                      ignore_index=True)
-    hmmscan_df = hmmscan_df.merge(weight_df, on='query', how='left')
+    hmmscan_df = hmmscan_df.merge(len_mass_df, on='query', how='left')
     if molecule == 'aa':
         return hmmscan_df
     else:
@@ -276,7 +278,7 @@ def mge_screen(infile, cpus, plasmids):
            '-max_hsps', '1',
            '-evalue', '1e-50',
            '-num_threads', cpus,
-           '-perc_identity', parse_args().l
+           '-perc_identity', parse_args().l]
     blast = Popen(cmd, stdout=PIPE)
     blast_out = StringIO(blast.communicate()[0].decode('utf-8'))
     mge_df = pd.DataFrame(columns=['contig', 'plasmid/mge', 'span'])
@@ -405,7 +407,7 @@ def grab_proteins(infile, hits, seq):
             r.description = ''
             to_write.append(r)
     if parse_args().e == 'seq':
-        filename = os.path.splitext(seq)[0] + '_SideroScanner.faa'
+        filename = os.path.splitext(seq)[0] + '_sideroscanner.faa'
     else:
         filename = parse_args().e
     SeqIO.write(to_write, filename, "fasta")
@@ -419,11 +421,6 @@ def main():
         if is_tool(d) == False:
             print('ERROR: ' + d + ' not found')
             sys.exit(1)
-
-    # Check if user has actually provided an input
-    if parse_args().i is None:
-        print('Please provide at least one sequence with -s')
-        sys.exit(1)
 
     # Check database folder
     if not os.path.isdir(dbpath):
@@ -457,7 +454,7 @@ def main():
     print(__title__ + ': ' + __version__)
     print('Your system is ' + os.uname()[0])
     if 'Linux' not in os.uname()[0]:
-        print('Warning: SideroScanner has not been tested on '+os.uname()[0])
+        print('Warning: sideroscanner has not been tested on '+os.uname()[0])
     print(datetime.today().strftime('%Y-%m-%d-%H:%M:%S'))
 
     if parse_args().t > os.cpu_count():
