@@ -28,29 +28,29 @@ warnings.simplefilter('ignore', BiopythonWarning) #Turn off annoying warnings
 def parse_args():
     parser = argparse.ArgumentParser(add_help=False,
                                      formatter_class=RawTextHelpFormatter,
-                                     usage="./sideroscanner.py [options]",
+                                     usage="./sideroscanner.py -i [-f -l -o -e]",
                                      description='''
         sideroscannner: a tool for annotating IROMPs in bacteria
         ========================================================''')
     group = parser.add_argument_group("Options")
 
     group.add_argument('-i', metavar='-', nargs='*', type=str,
-                        help='''path/to/(i)nput/fasta
+                        help='''| path/to/(i)nput/fasta
 -----------------------------------------------''')
     group.add_argument('-o', metavar='-', nargs='?', type=str,
                         const='sideroscanner_' + datetime.now().strftime("%d%m%y_%H%M") + '.csv',
-                        help='''(o)utput file.csv instead of STDOUT
-    -optional: path/to/(o)utput/file
+                        help='''| (o)utput file.csv instead of STDOUT
+    [optional: path/to/(o)utput/file]
     [default: sideroscanner_DDMMYY_hhmm.csv]
 -----------------------------------------------''')
     group.add_argument('-l', metavar='int', nargs='?', type=str, const='90',
-                        help='''determine genomic (l)ocation of hits
-    -optional: blastn percid
+                        help='''| determine genomic (l)ocation of hits
+    [optional: blastn percid]
     [default: 90]
 -----------------------------------------------''')
     group.add_argument('-f', metavar='int', nargs='?', type=int, const=3,
-                        help='''(f)lanking CDS screen
-    -optional: number of upstream/donwstream CDS
+                        help='''| (f)lanking CDS screen
+    [optional: number of up/downstream CDS]
     [default: 3]
 -----------------------------------------------''')
 #     group.add_argument('--tfbs', nargs='?', type=str, const='pwm',
@@ -59,36 +59,38 @@ def parse_args():
 #                         Provide a custom PSSM in meme format - (default: Fur pwm)'''))
     group.add_argument('-e', metavar='-', nargs='?', type=str,
                         const='seq',
-                        help='''(e)xport annotated proteins
-    -optional: path/to/export/fasta
-    [default: [-i]_sideroscanner.faa]
+                        help='''| (e)xport annotated proteins
+    [optional: path/to/export/fasta]
+    [default: *infile*_sideroscanner.faa]
 -----------------------------------------------''')
     group.add_argument('-t', metavar='int', type=int, default=os.cpu_count(),
-                       help='''number of (t)hreads to use
+                       help='''| number of (t)hreads to use
     [default: max available]
 -----------------------------------------------''')
     group.add_argument('--lowqual', metavar='-', nargs='?', type=str, const='',
-                        help='''(1) 'meta' CDS prediction AND (2) filters with plug domain only
-    -optional: path/to/(low)/(qual)ity/input/fasta
+                        help='''| (1) 'meta' CDS prediction AND (2) filters with plug domain only
+    [optional: path/to/(low)/(qual)ity/input/fasta]
     [default: all inputs]
 -----------------------------------------------''')
     group.add_argument('--lib', metavar='hmm', type=str, default=sys.path[0] + '/databases/iromps.hmm',
-                        help='''path/to/custom/HMM
+                        help='''| path/to/custom/HMM
     [default: ''' + sys.path[0] + '''/databases/iromps.hmm]
 -----------------------------------------------''')
     group.add_argument('--dbpath', metavar='path', type=str, default=sys.path[0] + '/databases/',
-                        help='''path/to/db/
+                        help='''| path/to/db/
     [default: ''' + sys.path[0] + '''/databases/]
 -----------------------------------------------''')
     group.add_argument('-v', action='store_true',
-                       help='''show version and exit
+                       help='''| show version and exit
 -----------------------------------------------''')
-    group.add_argument("-h", action="help", help='''show this help message and exit''')
+    group.add_argument("-h", action="help", help='''| show this help message and exit''')
 
-    # if len(sys.argv)==1:
-    #     parser.print_help()
-    #     print('\n'+'Please provide at least one argument or -h for help'+'\n')
-    #     sys.exit(1)
+    if len(sys.argv)==1:
+        parser.print_help()
+        print('''
+Please provide at least one argument or -h for help
+        ''')
+        sys.exit(1)
     return parser.parse_args()
 
 
