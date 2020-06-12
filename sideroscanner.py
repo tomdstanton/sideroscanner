@@ -6,12 +6,9 @@ __author__ = 'Tom Stanton'
 
 import argparse
 import os
-import requests
 import re
 import sys
-import zipfile
 import warnings
-#from numpy import where
 from shutil import which, get_terminal_size
 from subprocess import Popen, PIPE, DEVNULL, run
 from argparse import RawTextHelpFormatter
@@ -21,10 +18,12 @@ import pandas as pd
 from Bio import SeqIO, SearchIO, BiopythonWarning
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 from IPython.display import display
+from build_dbs import fetch
 
-warnings.simplefilter('ignore', BiopythonWarning) #Turn off annoying warnings
+warnings.simplefilter('ignore', BiopythonWarning)
+pathname = os.path.dirname(sys.argv[0])
+full_path = os.path.abspath(pathname)
 
-### Arguments ###
 def parse_args():
     parser = argparse.ArgumentParser(add_help=False,
                                      formatter_class=RawTextHelpFormatter,
@@ -53,10 +52,6 @@ def parse_args():
     [optional: number of up/downstream CDS]
     [default: 3]
 -----------------------------------------------''')
-#     group.add_argument('--tfbs', nargs='?', type=str, const='pwm',
-#                         '''If using contigs/assemblies,
-#                         scan the promoter regions of hits for TFBS using MAST
-#                         Provide a custom PSSM in meme format - (default: Fur pwm)'''))
     group.add_argument('-e', metavar='-', nargs='?', type=str,
                         const='seq',
                         help='''| (e)xport annotated proteins
@@ -72,13 +67,13 @@ def parse_args():
     [optional: path/to/(low)/(qual)ity/input/fasta]
     [default: all inputs]
 -----------------------------------------------''')
-    group.add_argument('--lib', metavar='hmm', type=str, default=sys.path[0] + '/databases/iromps.hmm',
+    group.add_argument('--lib', metavar='hmm', type=str, default=full_path + '/databases/iromps.hmm',
                         help='''| path/to/custom/HMM
-    [default: ''' + sys.path[0] + '''/databases/iromps.hmm]
+    [default: ''' + full_path + '''/databases/iromps.hmm]
 -----------------------------------------------''')
-    group.add_argument('--dbpath', metavar='path', type=str, default=sys.path[0] + '/databases/',
+    group.add_argument('--dbpath', metavar='path', type=str, default=full_path + '/databases/',
                         help='''| path/to/db/
-    [default: ''' + sys.path[0] + '''/databases/]
+    [default: ''' + full_path + '''/databases/]
 -----------------------------------------------''')
     group.add_argument('-v', action='store_true',
                        help='''| show version and exit
@@ -94,62 +89,12 @@ Please provide at least one argument or -h for help
     return parser.parse_args()
 
 
-### Globals ###
 dbpath = parse_args().dbpath
 lib = parse_args().lib
 
 def is_tool(name):
     """Check whether `name` is on PATH and marked as executable."""
     return which(name) is not None
-
-
-def fetch(url):
-    try:
-        r = requests.get(url)
-        r.raise_for_status()
-    except requests.exceptions.HTTPError as err:
-        raise SystemExit(err)
-    return r.content
-
-def get_mgedb():
-    mge_file = dbpath + 'mgedb'
-    with open(mge_file, mode='wb') as localfile:
-        localfile.write(fetch('http://202.120.12.136/ICEberg2/download/ICE_aa_all.fas'))
-
-def get_plsdb():
-    plsdb_file = dbpath + 'plsdb'
-    with open(plsdb_file, mode='wb') as localfile:
-        localfile.write(fetch('https://ccb-microbe.cs.uni-saarland.de/plsdb/plasmids/download/?zip'))
-    with zipfile.ZipFile(dbpath+'plsdb', "r") as zip_ref:
-        zip_ref.extractall(dbpath)
-    os.remove(dbpath + 'plsdb')
-    os.remove(dbpath + 'plsdb.tsv')
-    os.remove(dbpath + 'plsdb_changes.tsv')
-    os.remove(dbpath + 'plsdb.msh')
-    os.remove(dbpath + 'plsdb.abr')
-    os.remove(dbpath + 'plsdb.sim')
-    os.remove(dbpath + 'README.md')
-
-# def get_flankdb():
-#     handle1 = fetch(url,).decode('utf-8').splitlines()
-#     records = list(SeqIO.parse(handle1, "fasta"))
-#
-#     fasta_file = open(input_file, 'r')  # opens inputfile for reading
-#     fasta_lines = fasta_file.read().split('>')[0:]  # splits each sequence by header
-#     unique_sequences = open(output_file, 'w')  # opens outputfile for writing
-#
-#     def remove_complete_duplicates(fasta_lines):
-#         outputlist = []  # creates an empty list uniquesequences
-#         setofuniqsequence = set()  # assigns a set for sequences -set can only contain uniquesequences
-#         for sequence in fasta_lines:  # for loop - for sequence list in sequence list:
-#             if sequence not in setofuniqsequence:  # If sequence has not been encountered yet i.e unique:
-#                 outputlist.append(sequence)  # ... add it to list.
-#                 setofuniqsequence.add(sequence)  # ... add it to set.
-#         return outputlist
-#
-#     result = remove_complete_duplicates(fasta_lines)  # Remove duplicates from the list and defines as 'result'
-#     unique_sequences.write('>'.join(result))  # '>' replaces lost > symbols
-#     unique_sequences.close()  # closes output file
 
 def run_prodigal(infile, quality):
     print("Extracting proteins...")
@@ -222,9 +167,10 @@ def run_hmmscan(infile, cpus, molecule):
         return hmmscan_df
     len_mass_df = pd.DataFrame(columns=['query','len', 'mass(kDa)'])
     for r in SeqIO.parse(StringIO(infile), 'fasta'):
-        L = len(r._seq._data)
-        if '00' not in re.search(r'partial=(.*);start_type', r.description).group():
-            L = str(L)+'-partial'
+        L = str(len(r.seq))
+        if molecule == 'dna':
+            if '00' not in re.search(r'partial=(.*);start_type', r.description).group():
+                L = L+'-partial'
         X = ProteinAnalysis((r._seq._data.replace('*', '')))
         len_mass_df = len_mass_df.append({'query': r.id,
                                           'len': L,
