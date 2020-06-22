@@ -5,18 +5,14 @@ __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
 import zipfile
-import sys
-import os
-import argparse
-from argparse import RawTextHelpFormatter
+from os import cpu_count, remove
+from argparse import RawTextHelpFormatter, ArgumentParser
 
 from scripts.fetch import fetch
-
-pathname = os.path.dirname(sys.argv[0])
-full_path = os.path.abspath(pathname)
+from scripts.config import full_path
 
 def parse_args():
-    parser = argparse.ArgumentParser(add_help=False,
+    parser = ArgumentParser(add_help=False,
                                      formatter_class=RawTextHelpFormatter,
                                      usage="./build_dbs.py --dbpath [path/]",
                                      description='''
@@ -30,13 +26,11 @@ def parse_args():
     group.add_argument("-h", action="help", help='''| show this help message and exit''')
     return parser.parse_args()
 
-dbpath = parse_args().dbpath
-
 
 def get_mgedb():
-    mge_file = dbpath + 'mgedb/mgedb'
-    with open(mge_file, mode='wb') as localfile:
-        localfile.write(fetch('http://202.120.12.136/ICEberg2/download/ICE_aa_all.fas'), None)
+    mge_file = dbpath + '/mgedb'
+    with open(mge_file, mode='wb') as file:
+        file.write(fetch('http://202.120.12.136/ICEberg2/download/ICE_aa_all.fas'), None)
 
 
 def get_plsdb():
@@ -45,11 +39,28 @@ def get_plsdb():
         localfile.write(fetch('https://ccb-microbe.cs.uni-saarland.de/plsdb/plasmids/download/?zip'), None)
     with zipfile.ZipFile(dbpath + 'plsdb', "r") as zip_ref:
         zip_ref.extractall(dbpath + 'plsdb/')
-    os.remove(dbpath + 'plsdb')
-    os.remove(dbpath + 'plsdb.tsv')
-    os.remove(dbpath + 'plsdb_changes.tsv')
-    os.remove(dbpath + 'plsdb.msh')
-    os.remove(dbpath + 'plsdb.abr')
-    os.remove(dbpath + 'plsdb.sim')
-    os.remove(dbpath + 'README.md')
+    remove(dbpath + 'plsdb')
+    remove(dbpath + 'plsdb.tsv')
+    remove(dbpath + 'plsdb_changes.tsv')
+    remove(dbpath + 'plsdb.msh')
+    remove(dbpath + 'plsdb.abr')
+    remove(dbpath + 'plsdb.sim')
+    remove(dbpath + 'README.md')
+
+def main():
+    xhd
+
+if __name__ == "__main__":
+    dbpath = parse_args().dbpath
+    if parse_args().t > cpu_count():
+        print('Number of threads exceeds available CPUs, will use: %i' % cpu_count())
+    else:
+        threads = str(parse_args().t)
+    main()
+
+
+
+
+
+
 

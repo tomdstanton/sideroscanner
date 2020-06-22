@@ -7,6 +7,7 @@ __author__ = 'Tom Stanton'
 from subprocess import Popen, PIPE
 
 def run_trimal(in_file):
+    print("Trimming alignment...")
     cmd = ['trimal', '-in', in_file, '-automated1', '-clustal']
     child = Popen(cmd, stdout=PIPE)
     return child.communicate()[0].decode('utf-8')

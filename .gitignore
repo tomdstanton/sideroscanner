@@ -1,13 +1,4 @@
 /databases/flankdb
 /databases/mgedb
 /databases/plsdb
-
-/databases/PF00593.hmm
-/databases/PF07715.hmm
-
-/databases/irompdb/iromps.hmm.h3f
-/databases/irompdb/iromps.hmm.h3i
-/databases/irompdb/iromps.hmm.h3m
-/databases/irompdb/iromps.hmm.h3p
-/databases/irompdb/irompdb*
-/databases/irompdb/*.faa
+/databases/irompdb

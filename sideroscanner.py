@@ -4,47 +4,43 @@ __title__ = 'SideroScanner'
 __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
-import argparse, os, re, sys
+import re
+
+from sys import argv, stderr, exit
+from os import getcwd, path, uname, cpu_count
 from shutil import get_terminal_size
-from argparse import RawTextHelpFormatter
+from argparse import RawTextHelpFormatter, ArgumentParser
 from datetime import datetime
 from io import StringIO
 import pandas as pd
-from Bio import SeqIO
+from Bio.SeqIO import write, parse, to_dict
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 
 from scripts.blast import run_blastn, run_blastp
 from scripts.hmmer3 import run_hmmsearch, run_hmmpress, run_hmmscan
 from scripts.prodigal import run_prodigal
 from scripts.fetch import fetch
-
-
-pathname = os.path.dirname(sys.argv[0])
-full_path = os.path.abspath(pathname)
-cwd = os.getcwd()
-threads = str(os.cpu_count())
+from scripts.config import hmmpath, plspath, mgepath, flankpath
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(add_help=False,
+    parser = ArgumentParser(add_help=False,
                                      formatter_class=RawTextHelpFormatter,
                                      usage="sideroscanner.py -i query.fasta",
                                      description='''
         SideroScannner: a tool for annotating IROMPs in bacteria
         ========================================================
-        
-        Please cite: Stanton et al, 2020
-        ''')
+        Please cite: Stanton et al, 2020''')
     group = parser.add_argument_group("Options")
 
     group.add_argument('-i', metavar='-', nargs='*', type=str,
                        help='''| path/to/(i)nput/fasta
 -----------------------------------------------''')
     group.add_argument('-o', metavar='-', nargs='?', type=str,
-                       const='sideroscanner_' + datetime.now().strftime("%d%m%y_%H%M") + '.csv',
+                       const='sideroscanner_' + datetime.today().strftime("%d%m%y_%H%M") + '.csv',
                        help='''| (o)utput file.csv instead of STDOUT
     [optional: path/to/(o)utput/file]
-    [default: ''' + cwd + '''/sideroscanner_DDMMYY_hhmm.csv]
+    [default: ''' + getcwd() + '''/sideroscanner_DDMMYY_hhmm.csv]
 -----------------------------------------------''')
     group.add_argument('-l', metavar='int', nargs='?', type=str, const='90',
                        help='''| determine genomic (l)ocation of hits
@@ -62,45 +58,31 @@ def parse_args():
     [optional: path/to/export/fasta]
     [default: path/to/'input'_sideroscanner.faa]
 -----------------------------------------------''')
-    group.add_argument('-t', metavar='int', type=str, default=threads,
+    group.add_argument('-t', metavar='int', type=int, default=cpu_count(),
                        help='''| number of (t)hreads to use
-    [default: ''' + threads + ''']
------------------------------------------------''')
+    [default: %i]
+-----------------------------------------------'''%cpu_count())
     group.add_argument('--lowqual', metavar='-', nargs='?', type=str, const='',
                        help='''| (1) 'meta' CDS prediction AND (2) filters with plug domain only
     [optional: path/to/(low)/(qual)ity/input/fasta]
     [default: all inputs]
 -----------------------------------------------''')
-    group.add_argument('--lib', metavar='hmm', type=str, default=full_path + '/databases/irompdb/iromps.hmm',
+    group.add_argument('--lib', metavar='hmm', type=str, default=hmmpath + '/iromps.hmm',
                        help='''| path/to/custom/HMM/(lib)rary.hmm
-    [default: ''' + full_path + '''~/databases/irompdb/iromps.hmm]
------------------------------------------------''')
-    group.add_argument('--dbpath', metavar='path', type=str, default=full_path + '/databases/',
-                       help='''| path/to/db/
-    [default: ''' + full_path + '''~/databases/]
 -----------------------------------------------''')
     group.add_argument('-v', action='store_true',
                        help='''| show version and exit
 -----------------------------------------------''')
     group.add_argument("-h", action="help", help='''| show this help message and exit''')
-    if len(sys.argv) == 1:
-        parser.print_help(file=sys.stderr)
-        sys.exit(1)
+    if len(argv) == 1:
+        parser.print_help(file=stderr)
+        exit(1)
     return parser.parse_args()
 
 
-if parse_args().t > threads:
-    print('Number of threads exceeds available CPUs, will use: ' + threads)
-else:
-    threads = str(parse_args().t)
-dbpath = parse_args().dbpath
-lib = parse_args().lib
-percid = parse_args().l
-
-
 def domain_filter(in_file, qual):
-    q = run_hmmsearch(in_file, dbpath + 'PF07715.hmm', threads)
-    in_file_dict = SeqIO.to_dict(SeqIO.parse(StringIO(in_file), 'fasta'))
+    q = run_hmmsearch(in_file, hmmpath+'/PF07715.hmm', threads)
+    in_file_dict = to_dict(parse(StringIO(in_file), 'fasta'))
     filter1 = ''
     for h in q.hit_keys:
         filter1 = filter1 + in_file_dict[h].format("fasta")
@@ -108,9 +90,9 @@ def domain_filter(in_file, qual):
     if qual == 'meta' or len(filter1) == 0:
         return filter1
     else:
-        q = run_hmmsearch(filter1, dbpath + 'PF00593.hmm', threads)
+        q = run_hmmsearch(filter1, hmmpath+'/PF00593.hmm', threads)
         filter2 = ''
-        filter1_dict = SeqIO.to_dict(SeqIO.parse(StringIO(filter1), 'fasta'))
+        filter1_dict = to_dict(parse(StringIO(filter1), 'fasta'))
         for h in q.hit_keys:
             filter2 = filter2 + filter1_dict[h].format("fasta")
         print('Filtered ' + str(filter2.count('>')) + ' proteins with ' + q.description)
@@ -119,7 +101,7 @@ def domain_filter(in_file, qual):
 
 def annotation(in_file, molecule):
     data = []
-    for q in run_hmmscan(in_file, lib, threads):
+    for q in run_hmmscan(in_file, parse_args().lib, threads):
         if len(q.hits) > 0:
             data.append(q.id.rsplit('_', 1)[0] + ',' +
                         q.id + ',' + q.hits[0].id + ',' +
@@ -131,7 +113,7 @@ def annotation(in_file, molecule):
                               columns=['contig', 'query', 'hit', 'description', 'score'])
     print("Calculating length and molecular weight...")
     data = []
-    for r in SeqIO.parse(StringIO(in_file), 'fasta'):
+    for r in parse(StringIO(in_file), 'fasta'):
         L = str(len(r.seq))
         if molecule == 'dna':
             if '00' not in r.description.split(';')[1]:
@@ -144,7 +126,7 @@ def annotation(in_file, molecule):
         return hmmscan_df.merge(len_mass_df, on='query', how='left')
     else:
         data = []
-        for r in SeqIO.parse(StringIO(in_file), 'fasta'):
+        for r in parse(StringIO(in_file), 'fasta'):
             data.append(','.join(r.description.replace(' ', '').split('#')[0:4]))
         bed_df = pd.DataFrame([sub.split(",") for sub in data],
                               columns=['query', 'start', 'end', 'str'])
@@ -166,7 +148,7 @@ def range_subset(range1, range2):
 def location(in_file, hits):
     print("Screening for plasmids...")
     plasmids = []
-    for q in run_blastn(in_file, dbpath + 'plsdb/plsdb.fna', '10', None, threads, percid):
+    for q in run_blastn(in_file, plspath+'/plsdb.fna', '10', None, threads, parse_args().l):
         for h in q.hits:
             plasmids.append(h.query_id + ',' +
                             h.id + ',' +
@@ -175,7 +157,7 @@ def location(in_file, hits):
     print(str(len(plasmids)) + " plasmid(s) found")
     print("Screening for MGEs...")
     mges = []
-    for q in run_blastn(in_file, dbpath + 'mgedb/mgedb', '0', None, threads, percid):
+    for q in run_blastn(in_file, mgepath+'/mgedb', '0', None, threads, parse_args().l):
         for h in q.hits:
             mges.append(h.query_id + ',' +
                         h.id.split('|')[2] + ',' +
@@ -201,7 +183,7 @@ def location(in_file, hits):
 
 
 def flank_screen(in_file, hits, cds):
-    cds_dict = SeqIO.to_dict(SeqIO.parse(StringIO(in_file), 'fasta'))
+    cds_dict = to_dict(parse(StringIO(in_file), 'fasta'))
     queries = ''
     for h in hits['query'].tolist():
         pos = int(h.split('_')[-1])
@@ -225,7 +207,7 @@ def flank_screen(in_file, hits, cds):
     up = []
     down = []
     print("Screening %i up/downstream CDS" % cds)
-    for q in run_blastp(queries, dbpath + 'flankdb/flankdb', '1e-130', threads):
+    for q in run_blastp(queries, flankpath+'/flankdb', '1e-130', threads):
         if len(q.hits) > 0:
             gene_name = re.sub("\s*\[[^[]*\]$", '', q.hsps[0].hit_description).strip()
             if gene_name.startswith('('):
@@ -245,49 +227,62 @@ def flank_screen(in_file, hits, cds):
 
 def export_proteins(in_file, hits, seq):
     to_write = []
-    in_file_dict = SeqIO.to_dict(SeqIO.parse(StringIO(in_file), 'fasta'))
+    in_file_dict = to_dict(parse(StringIO(in_file), 'fasta'))
     for row in hits.itertuples():
         r = in_file_dict[row.query]
         r.id = row.query
         r.description = row.description+' '+row.hit
         to_write.append(r)
     if parse_args().e == 'seq':
-        filename = os.path.splitext(seq)[0] + '_sideroscanner.faa'
+        filename = path.splitext(seq)[0] + '_sideroscanner.faa'
     else:
         filename = parse_args().e
-    SeqIO.write(to_write, filename, "fasta")
+    write(to_write, filename, "fasta")
     print("Proteins written to: " + filename)
+
+
+# def export_gff():
+#     out_file = "your_file.gff"
+#
+#     qualifiers = {"source": "prediction", "score": 10.0, "other": ["Some", "annotations"],
+#                   "ID": "gene1"}
+#     sub_qualifiers = {"source": "prediction"}
+#     top_feature = SeqFeature(FeatureLocation(0, 20), type="gene", strand=1,
+#                              qualifiers=qualifiers)
+#
+#     rec.features = [top_feature]
 
 
 def main():
     if parse_args().v is True:
         print(__title__ + ' ' + __version__)
-        sys.exit(datetime.today().strftime('%Y-%m-%d-%H:%M:%S'))
+        exit(datetime.today().strftime('%Y-%m-%d-%H:%M:%S'))
 
     # Some quick sanity checks
     # Check database folder
-    if not os.path.isdir(dbpath):
-        print(dbpath + 'is not an existing directory')
-        sys.exit(1)
+    if not path.isdir(hmmpath):
+        print(hmmpath + 'is not an existing directory')
+        exit(1)
     else:
-        plug = dbpath + 'PF07715.hmm'
-        if not os.path.isfile(plug):
+        plug = hmmpath+'/PF07715.hmm'
+        if not path.isfile(plug):
             print(plug + ' not found, fetching...')
             with open(plug, mode='wb') as localfile:
                 localfile.write(fetch('https://pfam.xfam.org/family/PF07715/hmm'))
-        receptor = dbpath + 'PF00593.hmm'
-        if not os.path.isfile(receptor):
+        receptor = hmmpath+'/PF00593.hmm'
+        if not path.isfile(receptor):
             print(receptor + ' not found, fetching...')
             with open(receptor, mode='wb') as localfile:
                 localfile.write(fetch('https://pfam.xfam.org/family/PF00593/hmm'))
 
     # Check library HMM
-    if not os.path.isfile(lib):
+    lib = parse_args().lib
+    if not path.isfile(lib):
         print(lib + ' is not a valid file')
-        sys.exit(1)
+        exit(1)
     else:
         for i in [".h3i", ".h3p", ".h3f", ".h3m"]:
-            if not os.path.isfile(lib + i):
+            if not path.isfile(lib + i):
                 print(lib + ' is not pressed, allow me...')
                 run_hmmpress(lib)
                 break
@@ -295,9 +290,9 @@ def main():
     # Sanity checks passed, assuming good to go
     print('-' * int(get_terminal_size()[0]))
     print(__title__ + ': ' + __version__)
-    print('Your system is ' + os.uname()[0])
-    if 'Linux' not in os.uname()[0]:
-        print('Warning: sideroscanner has not been tested on ' + os.uname()[0])
+    print('Your system is ' + uname()[0])
+    if 'Linux' not in uname()[0]:
+        print('Warning: sideroscanner has not been tested on ' + uname()[0])
     print(datetime.today().strftime('%Y-%m-%d-%H:%M:%S'))
     print('Using ' + threads + ' threads...')
 
@@ -307,11 +302,11 @@ def main():
     # Loop over each input file
     for seq in parse_args().i:
         print('-' * int(get_terminal_size()[0]))
-        if not os.path.isfile(seq):
+        if not path.isfile(seq):
             print("No such file: " + seq)
             continue
 
-        if os.path.getsize(seq) <= 10:
+        if path.getsize(seq) <= 10:
             print(seq + " is too small, skipping...")
             continue
 
@@ -325,7 +320,7 @@ def main():
             print(seq + " is not a fasta file, skipping...")
             continue
 
-        name = os.path.splitext(os.path.basename(seq))[0]
+        name = path.splitext(path.basename(seq))[0]
         if "E" in line2:
             molecule = 'aa'
             print('Protein input detected: ' + name)
@@ -338,7 +333,7 @@ def main():
         quality = 'single'
         if molecule == 'dna':
             small_contig_list = []
-            for r in SeqIO.parse(seq, "fasta"):
+            for r in parse(seq, "fasta"):
                 if len(r.seq) < 10000:
                     small_contig_list.append(r.id)
 
@@ -364,7 +359,7 @@ def main():
 
         else:
             proteins = ''
-            for r in SeqIO.parse(seq, 'fasta'):
+            for r in parse(seq, 'fasta'):
                 proteins = proteins + r.format("fasta")
             proteins.replace('*', '')
             print("%i total protein queries" % proteins.count('>'))
@@ -418,4 +413,8 @@ def main():
 
 
 if __name__ == "__main__":
+    if parse_args().t > cpu_count():
+        print('Number of threads exceeds available CPUs, will use: %i' % cpu_count())
+    else:
+        threads = str(parse_args().t)
     main()
