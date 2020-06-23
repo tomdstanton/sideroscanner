@@ -16,11 +16,11 @@ import pandas as pd
 from Bio.SeqIO import write, parse, to_dict
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 
+from scripts.config import hmmpath, plspath, mgepath, flankpath
 from scripts.blast import run_blastn, run_blastp
 from scripts.hmmer3 import run_hmmsearch, run_hmmpress, run_hmmscan
 from scripts.prodigal import run_prodigal
 from scripts.fetch import fetch
-from scripts.config import hmmpath, plspath, mgepath, flankpath
 
 
 def parse_args():
@@ -42,7 +42,7 @@ def parse_args():
     [optional: path/to/(o)utput/file]
     [default: ''' + getcwd() + '''/sideroscanner_DDMMYY_hhmm.csv]
 -----------------------------------------------''')
-    group.add_argument('-l', metavar='int', nargs='?', type=str, const='90',
+    group.add_argument('-l', metavar='int', nargs='?', type=int, const=90,
                        help='''| determine genomic (l)ocation of hits
     [optional: blastn percid]
     [default: 90]
@@ -130,8 +130,6 @@ def annotation(in_file, molecule):
             data.append(','.join(r.description.replace(' ', '').split('#')[0:4]))
         bed_df = pd.DataFrame([sub.split(",") for sub in data],
                               columns=['query', 'start', 'end', 'str'])
-        bed_df['str'] = bed_df['str'].replace('1', '+')
-        bed_df['str'] = bed_df['str'].replace('-1', '-')
         return hmmscan_df.merge(len_mass_df, on='query', how='left').merge(bed_df, on='query', how='left')
 
 
@@ -148,41 +146,36 @@ def range_subset(range1, range2):
 def location(in_file, hits):
     print("Screening for plasmids...")
     plasmids = []
-    for q in run_blastn(in_file, plspath+'/plsdb.fna', '10', None, threads, parse_args().l):
+    percid = parse_args().l
+    for q in run_blastn(in_file, plspath+'/plsdb.fna', 10, percid, threads):
         for h in q.hits:
-            plasmids.append(h.query_id + ',' +
-                            h.id + ',' +
-                            str(h.hsps[0].query_range[0]) +
-                            '-' + str(h.hsps[0].query_range[1]))
-    print(str(len(plasmids)) + " plasmid(s) found")
+            plasmids.append(h.query_id + ',' + h.id)
+    print("%i plasmid(s) found"%len(plasmids))
     print("Screening for MGEs...")
     mges = []
-    for q in run_blastn(in_file, mgepath+'/mgedb', '0', None, threads, parse_args().l):
+    for q in run_blastn(in_file, mgepath+'/mgedb', 0, percid, threads):
         for h in q.hits:
             mges.append(h.query_id + ',' +
                         h.id.split('|')[2] + ',' +
                         str(h.hsps[0].query_range[0]) +
                         '-' + str(h.hsps[0].query_range[1]))
-    plasmid_contigs = []
-    for line in plasmids:
-        plasmid_contigs.append(line.split(',')[0])
-    true_mge = 0
-    for line in mges:
-        if line.split(',')[0] not in plasmid_contigs:
-            plasmids.append(line)
-            true_mge = true_mge + 1
-    print(str(true_mge) + " chromosomal MGE(s) found")
+    print("%i MGE(s) found"%len(mges))
     for row in hits.itertuples():
-        for line in plasmids:
+        for line in mges:
             start = int(line.split(',')[2].split('-')[0])
             end = int(line.split(',')[2].split('-')[1])
             if range_subset(range(int(row.start), int(row.end)), range(start, end)):
                 hits.at[row.Index, 'plasmid/mge'] = line.split(',')[1]
-                hits.at[row.Index, 'span'] = line.split(',')[2]
+    
+    for row in hits.itertuples():
+        for line in plasmids:
+            if row.contig == line.split(',')[0]:
+                hits.at[row.Index, 'plasmid/mge'] = line.split(',')[1]   
     return hits
 
 
-def flank_screen(in_file, hits, cds):
+def flank_screen(in_file, hits):
+    cds = parse_args.f
     cds_dict = to_dict(parse(StringIO(in_file), 'fasta'))
     queries = ''
     for h in hits['query'].tolist():
@@ -311,9 +304,9 @@ def main():
             continue
 
         # Check molecule type and restrictions
-        test = open(seq, "r")
-        line1 = test.readline()
-        line2 = test.readline()
+        with open(seq, "r") as test:
+            line1 = test.readline()
+            line2 = test.readline()
         if line1.startswith(">"):
             pass
         else:
@@ -327,7 +320,6 @@ def main():
         else:
             molecule = 'dna'
             print('DNA input detected: ' + name)
-        test.close()
 
         # If DNA input, get proteins
         quality = 'single'
@@ -383,7 +375,7 @@ def main():
             if molecule == 'aa':
                 print('Cannot screen flanking CDS in protein fasta')
             else:
-                hits = flank_screen(proteins, hits, parse_args().f)
+                hits = flank_screen(proteins, hits)
 
         del proteins
 
