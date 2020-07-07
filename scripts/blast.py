@@ -44,8 +44,10 @@ def run_blastp(query, blastp_db, evalue, threads):
     return SearchIO.parse(StringIO(child.communicate()[0].decode('utf-8')), 'blast-xml')
 
 def run_makeblastdb(infile, molecule, name):
+    print('Running makeblastdb on: ' + infile + '...')
     cmd = ['makeblastdb', '-in', infile,
-           '-title', name, '-parse_seqids',
+           '-title', name.rsplit('/', 1)[1].split('.')[0],
+           '-parse_seqids',
            '-dbtype', molecule, '-out', name]
     run(cmd)
     return name

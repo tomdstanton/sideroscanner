@@ -59,7 +59,11 @@ muscle \
 trimal
 
 ## Usage
-**Main annotation program:**
+### Annotate
+Takes any number of protein or DNA fasta-formatted files, accepts gzipped files too.
+The program iterates over input files but not individual records in the file, 
+for example if inputting a file of contigs, it will assume the whole file 
+is a sample as opposed to treating each record as an individual sample.
 ```
 sideroscanner.py -i query.fasta
 
@@ -100,9 +104,8 @@ Options:
   -h              | show this help message and exit
 ```
 
-
-### Examples
-* Scan some fasta files: ```sideroscanner.py -i path/to/*.fasta -o results.csv```
+**Example commands:**
+* Scan some gzipped fasta files and export results: ```sideroscanner.py -i path/to/*.fna.gz -o results.csv```
 * Scan some fasta files with a bad egg: ```sideroscanner.py -i path/to/*.fasta --lowqual path/to/bad_egg.fasta```
 * Scan an assembly and determine flanking genes plus genomic location of hits: ```sideroscanner.py -i genome.fna -f -l```
 * Scan an assembly and export annotated proteins: ```sideroscanner.py -i genome.fna -e hits.faa```
@@ -110,40 +113,29 @@ Options:
 **Example output:**
 18 seconds on a 4-core laptop
 ```
-------------------------------------------------------------------------------------------------------------------------------------------------
-SideroScanner: 0.0.1
-Your system is Linux
-2020-06-21-17:51:11
-Using 4 threads...
-------------------------------------------------------------------------------------------------------------------------------------------------
-DNA input detected: SGH10
-Extracting proteins...
-5251 proteins extracted
-Running hmmsearch...
-Filtered 17 proteins with TonB-dependent Receptor Plug Domain
-Running hmmsearch...
-Filtered 17 proteins with TonB dependent receptor
-Running hmmscan...
-Annotated 17 proteins
-Calculating length and molecular weight...
-| query              | hit           | description                         |   score |   len |   kDa |   start |     end | str   |
-|:-------------------|:--------------|:------------------------------------|--------:|------:|------:|--------:|--------:|:------|
-| NZ_CP025080.1_1512 | CirA          | Catecholate/colicin receptor        |  1189.2 |   589 |  65.7 | 1603768 | 1605537 | +     |
-| NZ_CP025080.1_2159 | FitA          | TonB-dependent siderophore receptor |  1353.6 |   690 |  75.6 | 2350967 | 2353039 | -     |
-| NZ_CP025080.1_4115 | FhuA          | Ferrichrome receptor                |  1211.5 |   735 |  81.4 | 4450561 | 4452768 | -     |
-| NZ_CP025080.1_2360 | YncD          | TonB-dependent siderophore receptor |  1443.2 |   701 |  77.1 | 2547544 | 2549649 | -     |
-| NZ_CP025080.1_2968 | PfeA_ortholog | Enterobactin receptor               |  1378.8 |   727 |  80.1 | 3191333 | 3193516 | +     |
-| NZ_CP025080.1_2962 | Fiu           | Catecholate receptor                |  1558.5 |   761 |  81.5 | 3185281 | 3187566 | +     |
-| NZ_CP025080.1_3649 | FepA          | Enterobactin receptor               |  1409.6 |   742 |  82.3 | 3941098 | 3943326 | +     |
-| NZ_CP025080.1_4705 | FepA          | Enterobactin receptor               |  1334.2 |   752 |  82.7 | 5112835 | 5115093 | -     |
-| NZ_CP025081.1_120  | IroN          | Salmochelin receptor                |  1453.7 |   724 |  79.3 |  119074 |  121248 | +     |
-| NZ_CP025080.1_1898 | FoxA          | Ferrioxamine receptor               |  1415.1 |   706 |  77.4 | 2088327 | 2090447 | -     |
-| NZ_CP025080.1_1697 | FyuA          | Yersiniabactin receptor             |  1489.1 |   673 |  73.7 | 1855865 | 1857886 | -     |
-| NZ_CP025081.1_110  | FecA          | Ferric-citrate receptor             |  1487.3 |   708 |  78.4 |  105595 |  107721 | -     |
-| NZ_CP025080.1_4881 | BtuB          | Vitamin B12 receptor                |   890.3 |   612 |  68.1 | 5331412 | 5333250 | -     |
-| NZ_CP025080.1_984  | HmuR          | Hemin receptor                      |  1644.9 |   787 |  86.3 | 1031991 | 1034354 | -     |
-| NZ_CP025080.1_3721 | FcuA          | Ferrichrome receptor                |  1522.6 |   732 |  79.2 | 4023151 | 4025349 | -     |
-| NZ_CP025081.1_147  | IutA          | Aerobactin receptor                 |  1435.1 |   733 |  80.9 |  147114 |  149315 | +     |
-| NZ_CP025080.1_3152 | IutA          | Aerobactin receptor                 |  1426.1 |   729 |  80.5 | 3387018 | 3389207 | +     |
+
 ```
+### Build databases
+By default, SideroScanner comes with just the IROMP HMM library because not everyone
+may want to screen for plasmids of virulence factors. But those that do can just
+run ```builddbs.py``` and/or specify the databases for the analysis of interest.
+The ```sideroscanner.py -l``` command to determine location of hits uses both the
+```plsdb``` from [PLSDB][https://ccb-microbe.cs.uni-saarland.de/plsdb/],
+and ```mgedb```  from [ICEBerg][https://db-mml.sjtu.edu.cn/ICEberg/],
+however if either one is absent
+the analysis can still be performed with the other, depending on what you want to look for.
+```
+builddbs.py
+
+Options:
+  -db [{plsdb,mgedb,flankdb}]
+                        | choose a specific database to build
+                            [default: all]
+                        -----------------------------------------------
+  -h                    | show this help message and exit
+```
+### Build HMM library
+By
+
+
 ![Image](https://github.com/tomdstanton/sideroscanner/blob/master/sideroscanner.png)

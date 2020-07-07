@@ -9,7 +9,7 @@ import os
 
 def run_cdhit(in_file, perc):
     out_file = os.path.splitext(in_file)[0]+'_nr.faa'
-    print('Clutsering ' + os.path.basename(in_file) + ' at '+str(perc*100)+'%...')
+    print('Clustering ' + os.path.basename(in_file) + ' at '+str(perc*100)+'%...')
     try:
         run(['cd-hit', '-i', in_file, '-o', out_file, '-c', str(perc), '-T', '0'])
         os.remove(out_file + '.clstr')
