@@ -6,7 +6,7 @@ __author__ = 'Tom Stanton'
 
 import re
 
-from sys import argv, stderr, exit
+from sys import argv, stderr, exit, stdin
 from os import getcwd, path, uname, cpu_count
 from shutil import get_terminal_size, copyfileobj
 from argparse import RawTextHelpFormatter, ArgumentParser
@@ -36,7 +36,7 @@ def parse_args():
     group = parser.add_argument_group("Options")
 
     group.add_argument('-i', metavar='-', nargs='*', type=str,
-                       help='''| path/to/(i)nput/fasta
+                       help='''| path/to/(i)nput/fasta [ '-' for STDIN ]
 -----------------------------------------------''')
     group.add_argument('-o', metavar='-', nargs='?', type=str,
                        const='sideroscanner_' + datetime.today().strftime("%d%m%y_%H%M") + '.csv',
@@ -288,10 +288,19 @@ def main():
     if parse_args().o is not None:
         out_df = pd.DataFrame()
 
+
     # Loop over each input file
     for seq in parse_args().i:
         print('-' * int(get_terminal_size()[0]))
-        name = path.splitext(path.basename(seq))[0]
+        if seq == '-':
+            name = 'stdin'
+            tmp = tempfile.NamedTemporaryFile()
+            with open(tmp.name, 'w') as f:
+                for line in stdin:
+                    f.write(line)
+            seq = tmp.name
+        else:
+            name = path.splitext(path.basename(seq))[0]
 
         # Check valid inputs
         if not path.isfile(seq):
@@ -366,8 +375,7 @@ def main():
         else:
             proteins = ''
             for r in parse(seq, 'fasta'):
-                proteins = proteins + r.format("fasta")
-            proteins = proteins.replace('*', '')
+                proteins = proteins + r.format("fasta").replace('*', '')
             print("%i total protein queries" % proteins.count('>'))
 
         if proteins.count('>') == 0:
