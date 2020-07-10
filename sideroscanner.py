@@ -239,8 +239,11 @@ def tfbs_screen(in_file, hits):
         except:
             continue
     print("Screening %i bp upstream of hits for Fur binding sites" % length)
-    results = run_mast(queries, furpath+'/fur.meme').split('\n',2)[-1].rsplit('\n',2)[0]
-    if results is None:
+    mast_out = run_mast(queries, furpath+'/fur.meme').rstrip()
+    results = ''
+    for line in (line for line in mast_out.split('\n') if not line.startswith('#')):
+        results = results + line
+    if len(results) == 0:
         print("No binding sites found")
         return hits
     else:
