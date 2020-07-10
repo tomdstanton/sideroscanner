@@ -41,6 +41,10 @@ def parse_args():
                        help='''| number of (t)hreads to use
     [default: %i]
 -----------------------------------------------''' % cpu_count())
+    group.add_argument('--keep', action='store_true',
+                       help='''| keep seed alignments and IROMP database files
+-----------------------------------------------''')
+
     group.add_argument("-h", action="help", help='''| show this help message and exit''')
     return parser.parse_args()
 
@@ -51,30 +55,9 @@ def get_fastadb():
                        'family:"tonb-dependent receptor family" AND '
                        'locations:(location:"Cell outer membrane [SL-0040]") '
                        'NOT partial NOT fragment', 'format': 'fasta'}
-    print("Fetching TonB-depenent receptors")
-    fetch(url, params, iromppath+'/iromps.faa')
-    return iromppath+'/iromps.faa'
-
-
-def seed_blast(in_file, fastadb, blastdb, name, db_df, excel):
-    hit_acc = []
-    for q in run_blastp(in_file, blastdb, parse_args().e, threads):
-        if len(q.hits) > 0:
-            print('%i hits found' % len(q.hits))
-            up = q.seq_len + parse_args().w
-            down = q.seq_len - parse_args().w
-            for h in q.hits:
-                if down <= h.seq_len <= up:
-                    hit_acc.append(h.blast_id)
-            print("%i hits filtered between %i-%i aa" % (len(hit_acc), down, up))
-            hit_df = db_df[db_df['accession'].isin(hit_acc)]
-            hit_df.to_excel(excel, sheet_name=name, index=False)
-            hits = ''
-            db_dict = SeqIO.to_dict(SeqIO.parse(fastadb, 'fasta'))
-            for h in hit_acc:
-                hits = hits + db_dict[h].format("fasta")
-    return hits
-
+    print("Downloading TonB-dependent receptor database")
+    print("(Make sure you have ~400Mb free space!)")
+    return fetch(url, params, iromppath+'/iromps.faa')
 
 def make_db_df(in_file):
     print('Creating DataFrame from ' + in_file + '...')
@@ -99,6 +82,27 @@ def fetch_seed(acc, name):
         db='protein', id=acc, rettype="fasta",
         retmode="text").read().rstrip('\n')
 
+
+def seed_blast(in_file, fastadb, blastdb, name, db_df, excel):
+    hit_acc = []
+    for q in run_blastp(in_file, blastdb, parse_args().e, threads):
+        if len(q.hits) > 0:
+            print('%i hits found' % len(q.hits))
+            up = q.seq_len + parse_args().w
+            down = q.seq_len - parse_args().w
+            for h in q.hits:
+                if down <= h.seq_len <= up:
+                    hit_acc.append(h.blast_id)
+            print("%i hits filtered between %i-%i aa" % (len(hit_acc), down, up))
+            hit_df = db_df[db_df['accession'].isin(hit_acc)]
+            hit_df.to_excel(excel, sheet_name=name, index=False)
+            hits = ''
+            db_dict = SeqIO.to_dict(SeqIO.parse(fastadb, 'fasta'))
+            for h in hit_acc:
+                hits = hits + db_dict[h].format("fasta")
+    return hits
+
+
 def main():
     print('-' * int(get_terminal_size()[0]))
     print(__title__ + ': ' + __version__)
@@ -109,7 +113,7 @@ def main():
     print('Using ' + threads + ' threads...')
     if not path.isfile(iromppath + '/iromps_nr.faa'):
         if not path.isfile(iromppath + '/iromps.faa'):
-            get_fastadb()
+            fastadb = get_fastadb()
         else:
             fastadb = run_cdhit(iromppath + '/iromps.faa', 1)
     else:
@@ -160,7 +164,8 @@ def main():
 
         # Cleanup
         remove(hmm)
-        remove(alignment)
+        if parse_args().keep is None:
+            remove(alignment)
 
     excel.save()
     print('-' * int(get_terminal_size()[0]))
@@ -168,6 +173,12 @@ def main():
     print('Written HMM library to: '+hmmpath+"/iromps.hmm")
     print("HMM library info written to:"+ iromppath +'/seed_alignment_blastp_' +
                             evalue + '_%i.xlsx' % window)
+
+    if parse_args().keep is None:
+        print("Cleaning up...")
+        remove(fastadb)
+        remove(blastdb)
+
     print("Done! Enjoy your new HMM library ;D")
     
 if __name__ == "__main__":

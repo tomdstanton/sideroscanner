@@ -9,10 +9,7 @@ from ftplib import FTP
 from tqdm import tqdm
 
 def fetch(url, params, outfile):
-    if params is not None:
-        print('Downloading '+ url + params + '...')
-    else:
-        print('Downloading ' + url +'...')
+    print('Fetching from ' + url +'...')
     if url.startswith('ftp'):
         url = url.replace('ftp://', '')
         ftp = FTP(url.split('/', 1)[0])

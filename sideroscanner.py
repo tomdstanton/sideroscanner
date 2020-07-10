@@ -5,23 +5,24 @@ __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
 import re
-
 from sys import argv, stderr, exit, stdin
 from os import getcwd, path, uname, cpu_count
 from shutil import get_terminal_size, copyfileobj
 from argparse import RawTextHelpFormatter, ArgumentParser
 from datetime import datetime
 from io import StringIO
+from Bio.Seq import Seq
 import pandas as pd
 from Bio.SeqIO import write, parse, to_dict
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 import gzip
 import tempfile
 
-from scripts.config import hmmpath, plspath, mgepath, flankpath
+from scripts.config import hmmpath, plspath, mgepath, flankpath, furpath
 from scripts.blast import run_blastn, run_blastp
 from scripts.hmmer3 import run_hmmsearch, run_hmmpress, run_hmmscan
 from scripts.prodigal import run_prodigal
+from scripts.meme import run_mast
 from scripts.fetch import fetch
 
 
@@ -54,6 +55,11 @@ def parse_args():
     [optional: number of up/downstream CDS]
     [default: 3]
 -----------------------------------------------''')
+    group.add_argument('-b', metavar='int', nargs='?', type=int, const=200,
+                       help='''| Fur (b)inding site screen
+    [optional: length of promoter region]
+    [default: 200]
+-----------------------------------------------''')
     group.add_argument('-e', metavar='-', nargs='?', type=str,
                        const='seq',
                        help='''| (e)xport annotated proteins
@@ -76,9 +82,9 @@ def parse_args():
                        help='''| show version and exit
 -----------------------------------------------''')
     group.add_argument("-h", action="help", help='''| show this help message and exit''')
-    if len(argv) == 1:
-        parser.print_help(file=stderr)
-        exit(1)
+    # if len(argv) == 1:
+    #     parser.print_help(file=stderr)
+    #     exit(1)
     return parser.parse_args()
 
 
@@ -215,6 +221,47 @@ def flank_screen(in_file, hits):
     d_df = d_df.groupby(['query'])['downstream'].apply(lambda x: ' '.join(x.astype(str))).reset_index()
     return hits.merge(u_df, on='query', how='left').merge(d_df, on='query', how='left')
 
+def tfbs_screen(in_file, hits):
+    length = parse_args().b
+    prom_dict = to_dict(parse(in_file, 'fasta'))
+    queries = ''
+    for row in hits.itertuples():
+        if row.str == '1':
+            f_start = int(row.start) - length
+            f_end = int(row.start)
+        elif row.str == '-1':
+            f_start = int(row.end)
+            f_end = int(row.end) + length
+        try:
+            x = prom_dict[row.contig][f_start:f_end]
+            x.id = row.query+':'+str(f_start)
+            queries = queries + x.format("fasta")
+        except:
+            continue
+    print("Screening %i bp upstream of hits for Fur binding sites" % length)
+    results = run_mast(queries, furpath+'/fur.meme').split('\n',2)[-1].rsplit('\n',2)[0]
+    if results is None:
+        print("No binding sites found")
+        return hits
+    else:
+        mast = []
+        for line in results.split('\n'):
+            query = line.split(' ')[0].split(':')[0]
+            fur_start = int(line.split(' ')[0].split(':')[1]) + int(line.split(' ')[4])
+            fur_end = int(line.split(' ')[0].split(':')[1]) + int(line.split(' ')[5])
+            pval = str(line.split(' ')[8])
+            bs = prom_dict[query.rsplit('_',1)[0]][fur_start:fur_end].seq._data
+            if line.split(' ')[1] == '-1':
+                bs = str(Seq(bs).reverse_complement())
+            mast.append(query+'#'+str(fur_start)+'#'+
+                        str(fur_end)+'#'+pval+'#'+bs)
+        print('Putative Fur binding sites found for %i hits'%len(mast))
+        df = pd.DataFrame([sub.split("#") for sub in mast],
+                          columns=['query', 'fur_start',
+                                   'fur_end', 'p_value',
+                                   'fur_box'])
+        return hits.merge(df, on='query', how='left')
+
 
 def export_proteins(in_file, hits, seq):
     to_write = []
@@ -245,9 +292,9 @@ def export_proteins(in_file, hits, seq):
 
 
 def main():
+
     if parse_args().v is True:
         print(__title__ + ' ' + __version__)
-        exit(datetime.today().strftime('%Y-%m-%d-%H:%M:%S'))
 
     # Some quick setup checks
     # Check database folder
@@ -257,17 +304,19 @@ def main():
     else:
         plug = hmmpath+'/PF07715.hmm'
         if not path.isfile(plug):
-            print(plug + ' not found, fetching...')
+            print(plug + ' not found, will download')
             fetch('https://pfam.xfam.org/family/PF07715/hmm', None, plug)
         receptor = hmmpath+'/PF00593.hmm'
         if not path.isfile(receptor):
-            print(receptor + ' not found, fetching...')
+            print(receptor + ' not found, will download')
             fetch('https://pfam.xfam.org/family/PF00593/hmm', None, receptor)
 
     # Check library HMM
     lib = parse_args().lib
     if not path.isfile(lib):
         print(lib + ' is not a valid file')
+        print('You can download the current IROMP HMM library from:')
+        print('https://github.com/tomdstanton/sideroscanner/blob/master/databases/HMMs/iromps.hmm')
         exit(1)
     else:
         for i in [".h3i", ".h3p", ".h3f", ".h3m"]:
@@ -404,6 +453,12 @@ def main():
                 print('Cannot screen plasmids in protein fasta')
             else:
                 hits = location(seq, hits)
+
+        if parse_args().b is not None:
+            if molecule == 'aa':
+                print('Cannot screen Fur binding sites in protein fasta')
+            else:
+                hits = tfbs_screen(seq, hits)
 
         if parse_args().e is not None:
             export_proteins(iromps, hits, seq)
