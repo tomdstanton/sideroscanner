@@ -235,28 +235,27 @@ def tfbs_screen(in_file, hits):
             continue
     print(f'Screening {length}bp upstream of hits for Fur binding sites')
     mast_out = run_mast(queries, furpath+'/fur.meme').rstrip()
-    results = ''
+    results = []
     for line in (line for line in mast_out.split('\n') if not line.startswith('#')):
-        results = results + line
+        results.append(line)
     if len(results) == 0:
         print("No binding sites found")
         return hits
     else:
+        print(f'Putative Fur binding sites found for {len(results)} hit(s)')
         mast = []
-        for line in results.split('\n'):
-            query = line.split(' ')[0].split(':')[0]
-            fur_start = int(line.split(' ')[0].split(':')[1]) + int(line.split(' ')[4])
-            fur_end = int(line.split(' ')[0].split(':')[1]) + int(line.split(' ')[5])
-            pval = str(line.split(' ')[8])
+        for q in results:
+            query = q.split(' ')[0].split(':')[0]
+            fur_start = int(q.split(' ')[0].split(':')[1]) + int(q.split(' ')[4])
+            fur_end = int(q.split(' ')[0].split(':')[1]) + int(q.split(' ')[5])
+            pval = str(q.split(' ')[8])
             bs = prom_dict[query.rsplit('_',1)[0]][fur_start:fur_end].seq._data
-            if line.split(' ')[1] == '-1':
+            if q.split(' ')[1] == '-1':
                 bs = str(Seq(bs).reverse_complement())
             mast.append(f'{query}#{str(fur_start)}#{str(fur_end)}#{pval}#{bs}')
-        print(f'Putative Fur binding sites found for {len(mast)} hit(s)')
         df = pd.DataFrame([sub.split("#") for sub in mast],
-                          columns=['query', 'fur_start',
-                                   'fur_end', 'p_value',
-                                   'fur_box'])
+                          columns=['query','fur_start','fur_end',
+                                   'p_value','fur_box'])
         return hits.merge(df, on='query', how='left')
 
 
