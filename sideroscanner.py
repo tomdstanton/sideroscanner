@@ -37,13 +37,13 @@ def parse_args():
     group = parser.add_argument_group("Options")
 
     group.add_argument('-i', metavar='-', nargs='*', type=str,
-                       help='''| path/to/(i)nput/fasta [ '-' for STDIN ]
+                       help='''| path/to/(i)nput/fasta ['-' for STDIN]
 -----------------------------------------------''')
     group.add_argument('-o', metavar='-', nargs='?', type=str,
-                       const='sideroscanner_' + datetime.today().strftime("%d%m%y_%H%M") + '.csv',
-                       help='''| (o)utput file.csv instead of STDOUT
+                       const=f'sideroscanner_{datetime.today().strftime("%d%m%y_%H%M")}.csv',
+                       help=f'''| (o)utput file.csv instead of STDOUT
     [optional: path/to/(o)utput/file]
-    [default: ''' + getcwd() + '''/sideroscanner_DDMMYY_hhmm.csv]
+    [default: {getcwd()}/sideroscanner_DDMMYY_hhmm.csv]
 -----------------------------------------------''')
     group.add_argument('-l', metavar='int', nargs='?', type=int, const=90,
                        help='''| determine genomic (l)ocation of hits
@@ -67,9 +67,9 @@ def parse_args():
     [default: path/to/'input'_sideroscanner.faa]
 -----------------------------------------------''')
     group.add_argument('-t', metavar='int', type=int, default=cpu_count(),
-                       help='''| number of (t)hreads to use
-    [default: %i]
------------------------------------------------'''%cpu_count())
+                       help=f'''| number of (t)hreads to use
+    [default: {cpu_count()}]
+-----------------------------------------------''')
     group.add_argument('--lowqual', metavar='-', nargs='?', type=str, const='',
                        help='''| (1) 'meta' CDS prediction AND (2) filters with plug domain only
     [optional: path/to/(low)/(qual)ity/input/fasta]
@@ -94,7 +94,7 @@ def domain_filter(in_file, qual):
     filter1 = ''
     for h in q.hit_keys:
         filter1 = filter1 + in_file_dict[h].format("fasta")
-    print('Filtered ' + str(filter1.count('>')) + ' proteins with ' + q.description)
+    print(f'Filtered {str(filter1.count(">"))} proteins with {q.description}')
     if qual == 'meta' or len(filter1) == 0:
         return filter1
     else:
@@ -103,7 +103,7 @@ def domain_filter(in_file, qual):
         filter1_dict = to_dict(parse(StringIO(filter1), 'fasta'))
         for h in q.hit_keys:
             filter2 = filter2 + filter1_dict[h].format("fasta")
-        print('Filtered ' + str(filter2.count('>')) + ' proteins with ' + q.description)
+        print(f'Filtered {str(filter2.count(">"))} proteins with {q.description}')
         return filter2
 
 
@@ -111,22 +111,18 @@ def annotation(in_file, molecule):
     data = []
     for q in run_hmmscan(in_file, parse_args().lib, threads):
         if len(q.hits) > 0:
-            data.append(q.id.rsplit('_', 1)[0] + ',' +
-                        q.id + ',' + q.hits[0].id + ',' +
-                        q.hits[0].description + ',' + str(q.hits[0].bitscore))
+            data.append(f'{q.id.rsplit("_", 1)[0]},{q.id}'
+                        f',{q.hits[0].id},{q.hits[0].description}'
+                        f',{str(q.hits[0].bitscore)}')
         else:
             return None
-    print("Annotated %i proteins" % len(data))
+    print(f'Annotated {len(data)} proteins')
     hmmscan_df = pd.DataFrame([sub.split(",") for sub in data],
                               columns=['contig', 'query', 'hit', 'description', 'score'])
     data = []
     for r in parse(StringIO(in_file), 'fasta'):
-        L = str(len(r.seq))
-        if molecule == 'dna':
-            if '00' not in r.description.split(';')[1]:
-                L = L + '-partial'
-        X = ProteinAnalysis(r._seq._data)
-        data.append(r.id + ',' + L + ',' + str(round((X.molecular_weight() / 1000), 1)))
+        data.append(f'{r.id},{str(len(r.seq))},'
+                    f'{str(round((ProteinAnalysis(r._seq._data).molecular_weight()/1000),1))}')
     len_mass_df = pd.DataFrame([sub.split(",") for sub in data],
                                columns=['query', 'len', 'kDa'])
     if molecule == 'aa':
@@ -156,16 +152,15 @@ def location(in_file, hits):
     percid = parse_args().l
     for q in run_blastn(in_file, plspath+'/plsdb.fna', 10, percid, threads):
         for h in q.hits:
-            plasmids.append(h.query_id + '#' + h.id)
-    print("%i plasmid(s) found"%len(plasmids))
+            plasmids.append(f'{h.query_id}#{h.id}')
+    print(f'{len(plasmids)} plasmid(s) found')
     print("Screening for MGEs...")
     mges = []
     for q in run_blastn(in_file, mgepath+'/mgedb', 0, percid, threads):
         for h in q.hits:
-            mges.append(h.query_id + '#' +
-                        h.id.split('|')[2] + '#' +
-                        str(h.hsps[0].query_range[0]) +
-                        '-' + str(h.hsps[0].query_range[1]))
+            mges.append(f'{h.query_id}#{h.id.split("|")[2]}#'
+                        f'{str(h.hsps[0].query_range[0])}-'
+                        f'{str(h.hsps[0].query_range[1])}')
     print("%i MGE(s) found"%len(mges))
     for row in hits.itertuples():
         for line in mges:
@@ -186,35 +181,35 @@ def flank_screen(in_file, hits):
     queries = ''
     for h in hits['query'].tolist():
         pos = int(h.split('_')[-1])
-        acc = h.rsplit('_', 1)[0] + '_'
+        acc = f'{h.rsplit("_", 1)[0]}_'
         for i in range(cds):
             i = i + 1
             try:
                 u = cds_dict[acc + str(pos - i)]
                 u.id = h
-                u.description = 'up_' + str(i)
+                u.description = f'up_{str(i)}'
                 queries = queries + u.format("fasta")
             except:
                 continue
             try:
                 d = cds_dict[acc + str(pos + i)]
                 d.id = h
-                d.description = 'down_' + str(i)
+                d.description = f'down_{str(i)}'
                 queries = queries + d.format("fasta")
             except:
                 continue
     up = []
     down = []
-    print("Screening %i up/downstream CDS" % cds)
+    print(f'Screening {cds} up/downstream CDS')
     for q in run_blastp(queries, flankpath+'/flankdb', '1e-130', threads):
         if len(q.hits) > 0:
             gene_name = re.sub("\s*\[[^[]*\]$", '', q.hsps[0].hit_description).strip()
             if gene_name.startswith('('):
                 gene_name = gene_name.split('(', 1)[1].split(')')[0]
             if 'up' in q.hsps[0].query_description:
-                up.append(q.hsps[0].query_id + '#' + gene_name)
+                up.append(f'{q.hsps[0].query_id}#{gene_name}')
             if 'down' in q.hsps[0].query_description:
-                down.append(q.hsps[0].query_id + '#' + gene_name)
+                down.append(f'{q.hsps[0].query_id}#{gene_name}')
     u_df = pd.DataFrame([sub.split("#") for sub in up], columns=['query', 'upstream'])
     d_df = pd.DataFrame([sub.split("#") for sub in down], columns=['query', 'downstream'])
     u_df = u_df.groupby(['query'])['upstream'].apply(lambda x: ' '.join(x.astype(str))).reset_index()
@@ -234,11 +229,11 @@ def tfbs_screen(in_file, hits):
             f_end = int(row.end) + length
         try:
             x = prom_dict[row.contig][f_start:f_end]
-            x.id = row.query+':'+str(f_start)
+            x.id = f'{row.query}:{str(f_start)}'
             queries = queries + x.format("fasta")
         except:
             continue
-    print("Screening %i bp upstream of hits for Fur binding sites" % length)
+    print(f'Screening {length}bp upstream of hits for Fur binding sites')
     mast_out = run_mast(queries, furpath+'/fur.meme').rstrip()
     results = ''
     for line in (line for line in mast_out.split('\n') if not line.startswith('#')):
@@ -256,9 +251,8 @@ def tfbs_screen(in_file, hits):
             bs = prom_dict[query.rsplit('_',1)[0]][fur_start:fur_end].seq._data
             if line.split(' ')[1] == '-1':
                 bs = str(Seq(bs).reverse_complement())
-            mast.append(query+'#'+str(fur_start)+'#'+
-                        str(fur_end)+'#'+pval+'#'+bs)
-        print('Putative Fur binding sites found for %i hits'%len(mast))
+            mast.append(f'{query}#{str(fur_start)}#{str(fur_end)}#{pval}#{bs}')
+        print(f'Putative Fur binding sites found for {len(mast)} hit(s)')
         df = pd.DataFrame([sub.split("#") for sub in mast],
                           columns=['query', 'fur_start',
                                    'fur_end', 'p_value',
@@ -272,14 +266,14 @@ def export_proteins(in_file, hits, seq):
     for row in hits.itertuples():
         r = in_file_dict[row.query]
         r.id = row.query
-        r.description = row.description+' '+row.hit
+        r.description = f'{row.description} {row.hit}'
         to_write.append(r)
     if parse_args().e == 'seq':
-        filename = path.splitext(seq)[0] + '_sideroscanner.faa'
+        filename = f'{path.splitext(seq)[0]}_sideroscanner.faa'
     else:
         filename = parse_args().e
     write(to_write, filename, "fasta")
-    print("Proteins written to: " + filename)
+    print(f'Proteins written to: {filename}')
 
 
 # def export_gff():
@@ -297,49 +291,48 @@ def export_proteins(in_file, hits, seq):
 def main():
 
     if parse_args().v is True:
-        print(__title__ + ' ' + __version__)
+        print(f'{__title__} {__version__}')
 
     # Some quick setup checks
     # Check database folder
     if not path.isdir(hmmpath):
-        print(hmmpath + 'is not an existing directory')
+        print(f'{hmmpath} is not an existing directory')
         exit(1)
     else:
         plug = hmmpath+'/PF07715.hmm'
         if not path.isfile(plug):
-            print(plug + ' not found, will download')
+            print(f'{plug} not found, will download')
             fetch('https://pfam.xfam.org/family/PF07715/hmm', None, plug)
         receptor = hmmpath+'/PF00593.hmm'
         if not path.isfile(receptor):
-            print(receptor + ' not found, will download')
+            print(f'{receptor} not found, will download')
             fetch('https://pfam.xfam.org/family/PF00593/hmm', None, receptor)
 
     # Check library HMM
     lib = parse_args().lib
     if not path.isfile(lib):
-        print(lib + ' is not a valid file')
+        print(f'{lib} is not a valid file')
         print('You can download the current IROMP HMM library from:')
         print('https://github.com/tomdstanton/sideroscanner/blob/master/databases/HMMs/iromps.hmm')
         exit(1)
     else:
         for i in [".h3i", ".h3p", ".h3f", ".h3m"]:
-            if not path.isfile(lib + i):
-                print(lib + ' is not pressed, allow me...')
+            if not path.isfile(f'{lib}{i}'):
+                print(f'{lib} is not pressed, allow me...')
                 run_hmmpress(lib)
                 break
 
     # Sanity checks passed, assuming good to go
     print('-' * int(get_terminal_size()[0]))
-    print(__title__ + ': ' + __version__)
-    print('Your system is ' + uname()[0])
+    print(f'{__title__} {__version__}')
+    print(f'Your system is {uname()[0]}')
     if 'Linux' not in uname()[0]:
-        print('Warning: sideroscanner has not been tested on ' + uname()[0])
+        print(f'Warning: sideroscanner has not been tested on {uname()[0]}')
     print(datetime.today().strftime('%Y-%m-%d-%H:%M:%S'))
-    print('Using ' + threads + ' threads...')
+    print(f'Using {threads} threads...')
 
     if parse_args().o is not None:
         out_df = pd.DataFrame()
-
 
     # Loop over each input file
     for seq in parse_args().i:
@@ -356,11 +349,11 @@ def main():
 
         # Check valid inputs
         if not path.isfile(seq):
-            print(seq + " is not a file, skipping...")
+            print(f"{seq} is not a file, skipping...")
             continue
 
         elif path.getsize(seq) <= 10:
-            print(seq + " is too small, skipping...")
+            print(f"{seq} is too small, skipping...")
             continue
 
         if seq.endswith(".gz"):
@@ -376,18 +369,18 @@ def main():
             if header.startswith(">"):
                 pass
             else:
-                print(seq + " is not a fasta file, skipping...")
+                print(f"{seq} is not a fasta file, skipping...")
                 continue
         except:
-            print(seq + " invalid file, skipping...")
+            print(f"{seq} invalid file, skipping...")
             continue
 
         if "E" in firstseq:
             molecule = 'aa'
-            print('Protein input detected: ' + name)
+            print(f'Protein input detected: {name}')
         else:
             molecule = 'dna'
-            print('DNA input detected: ' + name)
+            print(f'DNA input detected: {name}')
 
         # If DNA input, get proteins
         quality = 'single'
@@ -398,11 +391,11 @@ def main():
                     small_contig_list.append(r.id)
 
             if len(small_contig_list) > 50:
-                print(str(len(small_contig_list)) + ' contigs are < 10kbp')
+                print(f'{str(len(small_contig_list))} contigs are < 10kbp')
                 quality = 'meta'
 
             if len([1 for line in open(seq) if line.startswith(">")]) >= 1000:
-                print(name + ' has >= 1000 contigs')
+                print(f'{name} has >= 1000 contigs')
                 quality = 'meta'
 
             if parse_args().lowqual is not None:
@@ -415,20 +408,20 @@ def main():
                 print('Switching Prodigal to meta mode')
 
             proteins = run_prodigal(seq, quality).replace('*', '')
-            print("%i proteins extracted" % proteins.count('>'))
+            print(f"{proteins.count('>')} proteins extracted")
 
             if proteins.count('>') > 7500:
                 print('Too many CDS, switching to lowqual mode')
                 print('Re-running Prodigal in meta mode')
                 quality = 'meta'
                 proteins = run_prodigal(seq, quality).replace('*', '')
-                print("%i proteins extracted" % proteins.count('>'))
+                print(f"{proteins.count('>')} proteins extracted") 
 
         else:
             proteins = ''
             for r in parse(seq, 'fasta'):
                 proteins = proteins + r.format("fasta").replace('*', '')
-            print("%i total protein queries" % proteins.count('>'))
+            print(f"{proteins.count('>')} total protein queries")
 
         if proteins.count('>') == 0:
             continue
@@ -478,12 +471,12 @@ def main():
 
     if parse_args().o is not None:
         out_df.to_csv(parse_args().o, index=False)
-        print("Written results to: " + parse_args().o)
+        print(f"Written results to: {parse_args().o}")
 
 
 if __name__ == "__main__":
     if parse_args().t > cpu_count():
-        print('Number of threads exceeds available CPUs, will use: %i' % cpu_count())
+        print(f'Number of threads exceeds available CPUs, will use: {cpu_count()}')
         threads = str(cpu_count())
     else:
         threads = str(parse_args().t)
