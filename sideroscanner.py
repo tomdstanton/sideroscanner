@@ -5,29 +5,27 @@ __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
 import gzip
-import re
 import tempfile
 from argparse import RawTextHelpFormatter, ArgumentParser
 from datetime import datetime
-from io import StringIO
 from os import getcwd, path, uname, cpu_count, stat
 from shutil import get_terminal_size, copyfileobj
 from sys import exit, stdin, stderr, argv
 
 import pandas as pd
-from Bio.Seq import translate, Seq
-from Bio.SeqIO import write, parse, to_dict
-from Bio.SeqUtils.ProtParam import ProteinAnalysis
+from Bio.Seq import translate
+from Bio.SeqIO import parse
 
 import warnings
 from Bio import BiopythonWarning
 
-from scripts.config import hmmpath, plspath, mgepath, flankpath, furpath
+from scripts import tfbs_screen, location, flank_screen, domain_filter, annotation
+from scripts.export import export_proteins
+from scripts.config import hmmpath
 from scripts.fetch import fetch
-from scripts.tools.blast import run_blastn, run_blastp
-from scripts.tools.hmmer3 import run_hmmsearch, run_hmmpress, run_hmmscan
-from scripts.tools.meme import run_mast
+from scripts.tools.hmmer3 import run_hmmpress
 from scripts.tools.prodigal import run_prodigal
+from scripts.tools.orfm import run_orfm
 
 
 def parse_args():
@@ -79,11 +77,10 @@ def parse_args():
     [optional: path/to/(low)/(qual)ity/input/fasta]
     [default: all inputs]
 -----------------------------------------------''')
-    group.add_argument('--nofilter', action='store_true',
+    group.add_argument('--nofilter', metavar='-', nargs='?', type=str, const='',
                    help='''| Turn off domain filter
------------------------------------------------''')
-    group.add_argument('-g', action='store_true',
-                       help='''| Treat inputs as single genes
+    [optional: path/to/input/fasta]
+    [default: all inputs]
 -----------------------------------------------''')
     group.add_argument('--lib', metavar='hmm', type=str, default=hmmpath + '/iromps.hmm',
                        help='''| path/to/custom/HMM/(lib)rary.hmm
@@ -158,11 +155,11 @@ def main():
 
         # Check valid inputs
         if not path.isfile(seq):
-            print(f"{seq} is not a file, skipping...")
+            print(f"[!] {seq} is not a file, skipping...")
             continue
 
         elif stat(seq).st_size <= 10:
-            print(f"{seq} is too small, skipping...")
+            print(f"[!] {seq} is too small, skipping...")
             continue
 
         if seq.endswith(".gz"):
@@ -177,13 +174,13 @@ def main():
             with open(seq, "r") as test:
                 header = test.readline()
                 firstseq = test.readline()
-            if header.startswith(">"):
+            if header.startswith(">") or header.startswith("@"):
                 pass
             else:
-                print(f"{seq} is not a fasta file, skipping...")
+                print(f"[!] {seq} is not a fasta file, skipping...")
                 continue
         except:
-            print(f"{seq} invalid file, skipping...")
+            print(f"[!] {seq} invalid file, skipping...")
             continue
 
         lowqual = False
@@ -192,10 +189,15 @@ def main():
 
         if "E" in firstseq:
             input_type = 'protein'
-            print(f'Guessing {input_type} input: [{name}]')
+            print(f'[-] Guessing {input_type} input: \033[4m{name}\033[0m')
             proteins = ''
             for r in parse(seq, 'fasta'):
                 proteins = proteins + r.format("fasta").replace('*', '')
+        elif '@' in header:
+            input_type = 'fastq'
+            print(f'[-] Guessing {input_type} input: \033[4m{name}\033[0m')
+            proteins = run_orfm(seq)
+
         else:
             lengths = []
             for r in parse(seq, 'fasta'):
@@ -203,26 +205,19 @@ def main():
 
             if not all(lengths) is True and stat(seq).st_size >= 531000:
                 input_type = 'genome'
-                print(f'Guessing {input_type} input: [{name}]')
+                print(f'[-] Guessing {input_type} input: \033[4m{name}\033[0m')
                 if lengths.count(True) > 50 or len(lengths) > 1000:
                     lowqual = True
 
                 proteins = run_prodigal(seq, lowqual).replace('*', '')
                 if proteins.count('>') > 7500:
-                    print('Too many CDS, switching to lowqual mode')
+                    print('\n[!] Too many CDS, switching to low quality mode')
                     lowqual = True
                     proteins = run_prodigal(seq, lowqual).replace('*', '')
-
             else:
                 input_type = 'gene'
-                print(f'Guessing {input_type} input: [{name}]')
-                proteins = ''
-                print("Translating",end="", flush=True)
-                for r in parse(seq, "fasta"):
-                    warnings.simplefilter('ignore', BiopythonWarning)
-                    r.seq = translate(r.seq, table=11, stop_symbol='*')
-                    proteins = proteins + r.format("fasta").replace('*', '')
-                    print("", end=".", flush=True)
+                print(f'[-] Guessing {input_type} input: \033[4m{name}\033[0m')
+                proteins = run_orfm(seq)
 
             print(f"{proteins.count('>')} total protein queries")
 
@@ -230,37 +225,37 @@ def main():
             continue
 
         # Filter
-        if parse_args().nofilter:
+        if parse_args().nofilter is not None and seq in parse_args().nofilter:
             iromps = proteins
         else:
-            iromps = domain_filter(proteins, lowqual)
+            iromps = domain_filter.domain_filter(proteins, lowqual, threads)
 
         if len(iromps) == 0:
-            print('No significant hits')
+            print('[!] No significant hits')
             continue
         # Annotate
-        hits = annotation(iromps, input_type)
+        hits = annotation.annotation(iromps, input_type, parse_args().lib, threads)
         if hits is None:
-            print('No significant hits')
+            print('[!] No significant hits')
             continue
 
         if parse_args().f is not None:
             if input_type is not 'genome':
-                print(f'Cannot screen flanking CDS in {input_type} input file')
+                print(f'[!] Cannot screen flanking CDS in {input_type} input file')
             else:
-                hits = flank_screen(proteins, hits)
+                hits = flank_screen.flank_screen(proteins, hits, parse_args().f, threads)
 
         if parse_args().l is not None:
             if input_type is not 'genome':
-                print(f'Cannot screen plasmids/MGEs in {input_type} input file')
+                print(f'[!] Cannot screen plasmids/MGEs in {input_type} input file')
             else:
-                hits = location(seq, hits)
+                hits = location.location(seq, hits, parse_args().l, threads)
 
         if parse_args().b is not None:
             if input_type is not 'genome':
-                print(f'Cannot screen Fur binding sites in {input_type} input file')
+                print(f'[!] Cannot screen Fur binding sites in {input_type} input file')
             else:
-                hits = tfbs_screen(seq, hits)
+                hits = tfbs_screen.tfbs_screen(seq, hits, parse_args().b)
 
         if parse_args().e is not None:
             if 'original_seq' in locals():
@@ -279,7 +274,7 @@ def main():
 
     if parse_args().o is not None and not out_df.empty:
         out_df.to_csv(parse_args().o, index=False)
-        print(f"Written results to: {parse_args().o}")
+        print(f"[-] Written results to: {parse_args().o}")
 
 
 if __name__ == "__main__":

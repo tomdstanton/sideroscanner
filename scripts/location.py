@@ -4,6 +4,8 @@ __title__ = 'SideroScanner'
 __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
+from scripts.tools.blast import run_blastn
+from scripts.config import plspath, mgepath
 
 def range_subset(range1, range2):
     if not range1:
@@ -15,15 +17,12 @@ def range_subset(range1, range2):
     return range1.start in range2 and range1[-1] in range2
 
 
-def location(in_file, hits):
-    print("Screening for plasmids...")
+def location(in_file, hits, percid, threads):
     plasmids = []
-    percid = parse_args().l
     for q in run_blastn(in_file, plspath+'/plsdb.fna', 10, percid, threads):
         for h in q.hits:
             plasmids.append(f'{h.query_id}#{h.id}')
     print(f'{len(plasmids)} plasmid(s) found')
-    print("Screening for MGEs...")
     mges = []
     for q in run_blastn(in_file, mgepath+'/mgedb', 0, percid, threads):
         for h in q.hits:

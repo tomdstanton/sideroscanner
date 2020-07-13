@@ -7,7 +7,7 @@ __author__ = 'Tom Stanton'
 from subprocess import Popen, PIPE, DEVNULL
 
 def run_mast(in_file, pwm):
-    print("Running MAST...")
+    print("[>] Running MAST...  ", end="", flush=True)
     cmd = ['mast', '-hit_list', '-best', pwm, '-']
     child = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=DEVNULL)
     child.stdin.write(in_file.encode())

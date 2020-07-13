@@ -4,9 +4,15 @@ __title__ = 'SideroScanner'
 __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
+from Bio.SeqIO import parse, to_dict
+from io import StringIO
+import re
+from scripts.tools.blast import run_blastp
+from scripts.config import flankpath
+import pandas as pd
 
-def flank_screen(in_file, hits):
-    cds = parse_args().f
+
+def flank_screen(in_file, hits, cds, threads):
     cds_dict = to_dict(parse(StringIO(in_file), 'fasta'))
     queries = ''
     for h in hits['query'].tolist():
@@ -30,7 +36,6 @@ def flank_screen(in_file, hits):
                 continue
     up = []
     down = []
-    print(f'Screening {cds} up/downstream CDS')
     for q in run_blastp(queries, flankpath+'/flankdb', '1e-130', threads):
         if len(q.hits) > 0:
             gene_name = re.sub("\s*\[[^[]*\]$", '', q.hsps[0].hit_description).strip()
@@ -40,6 +45,7 @@ def flank_screen(in_file, hits):
                 up.append(f'{q.hsps[0].query_id}#{gene_name}')
             if 'down' in q.hsps[0].query_description:
                 down.append(f'{q.hsps[0].query_id}#{gene_name}')
+    print(f'{len(up)} upstream CDS and {len(down)} downstream CDS identified')
     u_df = pd.DataFrame([sub.split("#") for sub in up], columns=['query', 'upstream'])
     d_df = pd.DataFrame([sub.split("#") for sub in down], columns=['query', 'downstream'])
     u_df = u_df.groupby(['query'])['upstream'].apply(lambda x: ' '.join(x.astype(str))).reset_index()

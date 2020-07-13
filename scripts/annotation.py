@@ -4,10 +4,15 @@ __title__ = 'SideroScanner'
 __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
+from Bio.SeqUtils.ProtParam import ProteinAnalysis
+from scripts.tools.hmmer3 import run_hmmscan
+import pandas as pd
+from Bio.SeqIO import parse
+from io import StringIO
 
-def annotation(in_file, input_type):
+def annotation(in_file, input_type, lib, threads):
     data = []
-    for q in run_hmmscan(in_file, parse_args().lib, threads):
+    for q in run_hmmscan(in_file, lib, threads):
         if len(q.hits) > 0:
             data.append(f'{q.id.rsplit("_", 1)[0]},{q.id}'
                         f',{q.hits[0].id},{q.hits[0].description}'

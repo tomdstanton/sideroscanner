@@ -9,8 +9,7 @@ from subprocess import Popen, PIPE, run
 from io import StringIO
 
 def run_blastn(query, blastn_db, cov, percid, threads):
-    print('Running blastn: percid=%i cov=%i'%(percid,cov)+
-          ' db='+blastn_db+'...')
+    print('[>] Running blastn...    ', end="", flush=True)
     cmd = ['blastn',
            '-query', query,
            '-db', blastn_db,
@@ -28,8 +27,7 @@ def run_blastn(query, blastn_db, cov, percid, threads):
 
 
 def run_blastp(query, blastp_db, evalue, threads):
-    print('Running blastp: E-value= '+evalue+
-          ' db='+blastp_db+'...')
+    print('[>] Running blastp...    ', end="", flush=True)
     cmd = ['blastp',
            '-db', blastp_db,
            '-outfmt', '5',
@@ -44,7 +42,7 @@ def run_blastp(query, blastp_db, evalue, threads):
     return SearchIO.parse(StringIO(child.communicate()[0].decode('utf-8')), 'blast-xml')
 
 def run_makeblastdb(infile, molecule, name):
-    print('Running makeblastdb on: ' + infile + '...')
+    print('[>] Running makeblastdb...   ', end="", flush=True)
     cmd = ['makeblastdb', '-in', infile,
            '-title', name.rsplit('/', 1)[1].split('.')[0],
            '-parse_seqids',

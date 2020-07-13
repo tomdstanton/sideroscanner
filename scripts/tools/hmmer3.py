@@ -9,7 +9,7 @@ from subprocess import Popen, PIPE, run
 from io import StringIO
 
 def run_hmmsearch(in_file, hmm, threads):
-    print("Running hmmsearch...")
+    print("[>] Running hmmsearch... ", end="", flush=True)
     cmd = ['hmmsearch', '--noali', '--cut_tc', '--cpu', threads, hmm, '-']
     child = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
     child.stdin.write(in_file.encode())
@@ -17,7 +17,7 @@ def run_hmmsearch(in_file, hmm, threads):
 
 
 def run_hmmscan(in_file, hmm, threads):
-    print("Running hmmscan...")
+    print("[>] Running hmmscan...   ", end="", flush=True)
     cmd = ['hmmscan', '--noali',
            #'--domE', '0.2', '-E', '1e-50',
            '--cpu', threads, hmm, '-']
@@ -27,7 +27,7 @@ def run_hmmscan(in_file, hmm, threads):
 
 
 def run_hmmbuild(in_file, id, out_file, threads):
-    print("Running hmmbuild...")
+    print("[>] Running hmmbuild...")
     cmd = ['hmmbuild', '--cpu', threads,
            '--informat', 'clustal', '--amino',
            '-n', id, out_file, '-']

@@ -11,7 +11,7 @@ def run_prodigal(in_file, lowqual):
         mode = 'meta'
     else:
         mode = 'single'
-    print(f"Running prodigal in {mode} mode...")
+    print(f"[>] Running prodigal in {mode} mode...  ", end="", flush=True)
     cmd = ['prodigal', '-i', in_file, '-o', '/dev/null',
            '-a', '/dev/stdout', '-q', '-p', mode]
     child = Popen(cmd, stdout=PIPE)

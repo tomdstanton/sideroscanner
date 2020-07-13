@@ -4,9 +4,13 @@ __title__ = 'SideroScanner'
 __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
+from Bio.Seq import Seq
+from Bio.SeqIO import parse, to_dict
+import pandas as pd
+from scripts.config import furpath
+from scripts.tools.meme import run_mast
 
-def tfbs_screen(in_file, hits):
-    length = parse_args().b
+def tfbs_screen(in_file, hits, length):
     prom_dict = to_dict(parse(in_file, 'fasta'))
     queries = ''
     for row in hits.itertuples():
@@ -22,7 +26,7 @@ def tfbs_screen(in_file, hits):
             queries = queries + x.format("fasta")
         except:
             continue
-    print(f'Screening {length}bp upstream of hits for Fur binding sites')
+
     mast_out = run_mast(queries, furpath+'/fur.meme').rstrip()
     results = []
     for line in (line for line in mast_out.split('\n') if not line.startswith('#')):
@@ -31,7 +35,7 @@ def tfbs_screen(in_file, hits):
         print("No binding sites found")
         return hits
     else:
-        print(f'Putative Fur binding sites found for {len(results)} hit(s)')
+        print(f'Putative TFBS for {len(results)} hit(s)')
         mast = []
         for q in results:
             query = q.split(' ')[0].split(':')[0]

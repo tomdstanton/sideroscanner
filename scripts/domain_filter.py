@@ -4,8 +4,12 @@ __title__ = 'SideroScanner'
 __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
+from Bio.SeqIO import to_dict, parse
+from io import StringIO
+from scripts.tools.hmmer3 import run_hmmsearch
+from scripts.config import hmmpath
 
-def domain_filter(in_file, lowqual):
+def domain_filter(in_file, lowqual, threads):
     q = run_hmmsearch(in_file, hmmpath+'/PF07715.hmm', threads)
     in_file_dict = to_dict(parse(StringIO(in_file), 'fasta'))
     filter1 = ''
