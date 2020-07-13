@@ -5,21 +5,22 @@ __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
 import re
-import pandas as pd
+from argparse import RawTextHelpFormatter, ArgumentParser
+from datetime import datetime
 from os import cpu_count, remove, uname, path
 from pathlib import Path
-from argparse import RawTextHelpFormatter, ArgumentParser
-from Bio import SeqIO, Entrez
 from shutil import get_terminal_size
-from datetime import datetime
 
-from scripts.blast import run_blastp, run_makeblastdb
-from scripts.cdhit import run_cdhit
-from scripts.fetch import fetch
-from scripts.hmmer3 import run_hmmbuild
-from scripts.trimal import run_trimal
-from scripts.muscle import run_muscle
+import pandas as pd
+from Bio import SeqIO, Entrez
+
 from scripts.config import iromppath, dbpath, hmmpath
+from scripts.fetch import fetch
+from scripts.tools.blast import run_blastp, run_makeblastdb
+from scripts.tools.cdhit import run_cdhit
+from scripts.tools.hmmer3 import run_hmmbuild
+from scripts.tools.muscle import run_muscle
+from scripts.tools.trimal import run_trimal
 
 
 def parse_args():

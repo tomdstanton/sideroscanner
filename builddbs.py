@@ -4,19 +4,21 @@ __title__ = 'SideroScanner'
 __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
-import zipfile
 import gzip
-from os import remove, uname
+import zipfile
 from argparse import RawTextHelpFormatter, ArgumentParser
-from shutil import get_terminal_size
 from datetime import datetime
+from os import remove, uname
 from pathlib import Path
+from shutil import get_terminal_size
+
 from Bio.SeqIO import parse, write
 
-from scripts.fetch import fetch
 from scripts.config import flankpath, mgepath, plspath
-from scripts.blast import run_makeblastdb
-from scripts.cdhit import run_cdhit
+from scripts.fetch import fetch
+from scripts.tools.blast import run_makeblastdb
+from scripts.tools.cdhit import run_cdhit
+
 
 def parse_args():
     parser = ArgumentParser(add_help=False,

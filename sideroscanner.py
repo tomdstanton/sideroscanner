@@ -4,26 +4,27 @@ __title__ = 'SideroScanner'
 __version__ = '0.0.1'
 __author__ = 'Tom Stanton'
 
+import gzip
 import re
-from sys import argv, stderr, exit, stdin
-from os import getcwd, path, uname, cpu_count
-from shutil import get_terminal_size, copyfileobj
+import tempfile
 from argparse import RawTextHelpFormatter, ArgumentParser
 from datetime import datetime
 from io import StringIO
-from Bio.Seq import Seq
+from os import getcwd, path, uname, cpu_count
+from shutil import get_terminal_size, copyfileobj
+from sys import exit, stdin, stderr, argv
+
 import pandas as pd
+from Bio.Seq import translate, Seq
 from Bio.SeqIO import write, parse, to_dict
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
-import gzip
-import tempfile
 
 from scripts.config import hmmpath, plspath, mgepath, flankpath, furpath
-from scripts.blast import run_blastn, run_blastp
-from scripts.hmmer3 import run_hmmsearch, run_hmmpress, run_hmmscan
-from scripts.prodigal import run_prodigal
-from scripts.meme import run_mast
 from scripts.fetch import fetch
+from scripts.tools.blast import run_blastn, run_blastp
+from scripts.tools.hmmer3 import run_hmmsearch, run_hmmpress, run_hmmscan
+from scripts.tools.meme import run_mast
+from scripts.tools.prodigal import run_prodigal
 
 
 def parse_args():
@@ -75,6 +76,12 @@ def parse_args():
     [optional: path/to/(low)/(qual)ity/input/fasta]
     [default: all inputs]
 -----------------------------------------------''')
+    group.add_argument('--nofilter', action='store_true',
+                   help='''| Turn off domain filter
+-----------------------------------------------''')
+    group.add_argument('-g', action='store_true',
+                       help='''| Treat inputs as single genes
+-----------------------------------------------''')
     group.add_argument('--lib', metavar='hmm', type=str, default=hmmpath + '/iromps.hmm',
                        help='''| path/to/custom/HMM/(lib)rary.hmm
 -----------------------------------------------''')
@@ -82,9 +89,9 @@ def parse_args():
                        help='''| show version and exit
 -----------------------------------------------''')
     group.add_argument("-h", action="help", help='''| show this help message and exit''')
-    # if len(argv) == 1:
-    #     parser.print_help(file=stderr)
-    #     exit(1)
+    if len(argv) == 1:
+        parser.print_help(file=stderr)
+        exit(1)
     return parser.parse_args()
 
 
@@ -275,18 +282,6 @@ def export_proteins(in_file, hits, seq):
     print(f'Proteins written to: {filename}')
 
 
-# def export_gff():
-#     out_file = "your_file.gff"
-#
-#     qualifiers = {"source": "prediction", "score": 10.0, "other": ["Some", "annotations"],
-#                   "ID": "gene1"}
-#     sub_qualifiers = {"source": "prediction"}
-#     top_feature = SeqFeature(FeatureLocation(0, 20), type="gene", strand=1,
-#                              qualifiers=qualifiers)
-#
-#     rec.features = [top_feature]
-
-
 def main():
 
     if parse_args().v is True:
@@ -358,7 +353,9 @@ def main():
         if seq.endswith(".gz"):
             tmp = tempfile.NamedTemporaryFile()
             copyfileobj(gzip.open(seq), tmp)
+            original_seq = seq
             seq = tmp.name
+            name = path.splitext(name)[0]
 
         # Check molecule type and restrictions
         try:
@@ -384,37 +381,45 @@ def main():
         # If DNA input, get proteins
         quality = 'single'
         if molecule == 'dna':
-            small_contig_list = []
-            for r in parse(seq, "fasta"):
-                if len(r.seq) < 10000:
-                    small_contig_list.append(r.id)
-
-            if len(small_contig_list) > 50:
-                print(f'{str(len(small_contig_list))} contigs are < 10kbp')
-                quality = 'meta'
-
-            if len([1 for line in open(seq) if line.startswith(">")]) >= 1000:
-                print(f'{name} has >= 1000 contigs')
-                quality = 'meta'
-
             if parse_args().lowqual is not None:
                 if len(parse_args().lowqual) == 0:
                     quality = 'meta'
                 if seq in parse_args().lowqual:
                     quality = 'meta'
 
-            if quality == 'meta':
-                print('Switching Prodigal to meta mode')
+            if path.getsize(seq) <= 20000 or parse_args().g == True:
+                print(f'Treating {name} as gene(s)...')
+                proteins = ''
+                for r in parse(seq, "fasta"):
+                    r.seq = translate(r.seq, table=11, stop_symbol='*', to_stop=True)
+                    proteins = proteins + r.format("fasta").replace('*', '')
+                molecule = 'aa'
+            else:
+                small_contig_list = []
+                for r in parse(seq, "fasta"):
+                    if len(r.seq) < 10000:
+                        small_contig_list.append(r.id)
 
-            proteins = run_prodigal(seq, quality).replace('*', '')
-            print(f"{proteins.count('>')} proteins extracted")
+                if len(small_contig_list) > 50:
+                    print(f'{str(len(small_contig_list))} contigs are < 10kbp')
+                    quality = 'meta'
 
-            if proteins.count('>') > 7500:
-                print('Too many CDS, switching to lowqual mode')
-                print('Re-running Prodigal in meta mode')
-                quality = 'meta'
+                if len([1 for line in open(seq) if line.startswith(">")]) >= 1000:
+                    print(f'{name} has >= 1000 contigs')
+                    quality = 'meta'
+
+                if quality == 'meta':
+                    print('Switching Prodigal to meta mode')
+
                 proteins = run_prodigal(seq, quality).replace('*', '')
-                print(f"{proteins.count('>')} proteins extracted") 
+
+                if proteins.count('>') > 7500:
+                    print('Too many CDS, switching to lowqual mode')
+                    print('Re-running Prodigal in meta mode')
+                    quality = 'meta'
+                    proteins = run_prodigal(seq, quality).replace('*', '')
+
+            print(f"{proteins.count('>')} proteins extracted")
 
         else:
             proteins = ''
@@ -426,7 +431,10 @@ def main():
             continue
 
         # Filter
-        iromps = domain_filter(proteins, quality)
+        if parse_args().nofilter == True:
+            iromps = proteins
+        else:
+            iromps = domain_filter(proteins, quality)
 
         if len(iromps) == 0:
             print('No significant hits')
@@ -439,23 +447,25 @@ def main():
 
         if parse_args().f is not None:
             if molecule == 'aa':
-                print('Cannot screen flanking CDS in protein fasta')
+                print('Cannot screen flanking CDS in protein/gene fasta')
             else:
                 hits = flank_screen(proteins, hits)
 
         if parse_args().l is not None:
             if molecule == 'aa':
-                print('Cannot screen plasmids in protein fasta')
+                print('Cannot screen plasmids in protein/gene fasta')
             else:
                 hits = location(seq, hits)
 
         if parse_args().b is not None:
             if molecule == 'aa':
-                print('Cannot screen Fur binding sites in protein fasta')
+                print('Cannot screen Fur binding sites in protein/gene fasta')
             else:
                 hits = tfbs_screen(seq, hits)
 
         if parse_args().e is not None:
+            if 'original_seq' in locals():
+                seq = path.splitext(original_seq)[0]
             export_proteins(iromps, hits, seq)
 
         # Tidying up
