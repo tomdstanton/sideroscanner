@@ -14,5 +14,6 @@
 /data/irompdb/iromps_nr.faa
 /data/irompdb/PF00593.hmm
 /data/irompdb/PF07715.hmm
-/data/irompdb/seed_alignment_blastp_1e-130_2.xlsx
+/*.xlsx
 /dependencies.csv
+/test
