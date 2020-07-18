@@ -4,7 +4,7 @@
 from setuptools import setup
 
 setup(
-    title='SideroScanner',
+    name='SideroScanner',
     version='0.0.1',
     packages=['scripts', 'scripts.tools'],
     url='https://github.com/tomdstanton/sideroscanner',

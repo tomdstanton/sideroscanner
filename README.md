@@ -135,7 +135,7 @@ Options:
   -db plsdb/mgedb/flankdb [plsdb/mgedb/flankdb ...]
                         build specific database [default: all]
                         -----------------------------------------------
-  -k                    keep database fasta files
+  --keep                keep database fasta files
                         -----------------------------------------------
   -h                    show this help message and exit
 ```

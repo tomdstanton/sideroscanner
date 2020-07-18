@@ -103,7 +103,7 @@ def main():
         exit('[!] -db flag requires either [plsdb/mgedb/flankdb]')
 
     print('-' * int(get_terminal_size()[0]))
-    print(f'{__title__} {__version__}')
+    print(f'{__name__} {__version__}')
     print(f'Your system is {uname()[0]}')
     if 'Linux' not in uname()[0]:
         print(f'[!] Warning: scripts has not been tested on {uname()[0]}')
