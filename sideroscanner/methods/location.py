@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .tools.blast import run_blastn
+from sideroscanner.tools.blast import run_blastn
 
 def range_subset(range1, range2):
     if not range1:

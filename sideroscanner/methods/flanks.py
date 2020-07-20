@@ -4,7 +4,7 @@
 from Bio.SeqIO import parse, to_dict
 from io import StringIO
 import re
-from .tools.blast import run_blastp
+from sideroscanner.tools.blast import run_blastp
 import pandas as pd
 
 

@@ -4,7 +4,7 @@
 from Bio.Seq import Seq
 from Bio.SeqIO import parse, to_dict
 import pandas as pd
-from .tools.meme import run_mast
+from sideroscanner.tools.meme import run_mast
 
 def tfbs_screen(in_file, furpath, hits, length):
     prom_dict = to_dict(parse(in_file, 'fasta'))

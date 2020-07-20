@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
-from .tools.hmmer3 import run_hmmscan
+from sideroscanner.tools.hmmer3 import run_hmmscan
 import pandas as pd
 from Bio.SeqIO import to_dict, parse
 from io import StringIO
-from .tools.hmmer3 import run_hmmsearch
+from sideroscanner.tools.hmmer3 import run_hmmsearch
 
 
 def domain_filter(in_file, iromppath, lowqual, threads):

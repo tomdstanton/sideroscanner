@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from .tools.blast import run_blastp
+from sideroscanner.tools.blast import run_blastp
 
 def seed_blast(in_file, blastdb, eval, window, threads):
     hit_acc = []

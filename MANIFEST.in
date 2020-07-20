@@ -1,5 +1,6 @@
-sideroscanner/data/irompdb/iromps.csv
-sideroscanner/data/irompdb/iromps.hmm
-README.md
-sideroscanner.png
-requirements.txt
+include sideroscanner/data/irompdb/iromps.csv
+include sideroscanner/data/irompdb/iromps.hmm
+include sideroscanner/data/furdb/fur.meme
+include README.md
+include sideroscanner.png
+include requirements.txt

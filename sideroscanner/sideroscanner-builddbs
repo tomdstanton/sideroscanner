@@ -1,32 +1,40 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+__author__ = 'Tom Stanton'
+__title__ = 'SideroScanner'
+__version__ = '0.0.1'
+__author_email__ = 'T.D.Stanton@sms.ed.ac.uk'
+__description__ = 'A tool for annotating IROMPs in bacteria'
+__license__ = 'gpl-3.0'
+
 import gzip
 import zipfile
 from argparse import RawTextHelpFormatter, ArgumentParser
 from datetime import datetime
 from os import remove, uname
-from os.path import dirname, abspath, isfile
+from os.path import dirname, isfile
 from glob import glob
 from pathlib import Path
 from shutil import get_terminal_size
-from sys import argv
-
 from Bio.SeqIO import parse, write
+import sideroscanner
+from sideroscanner.methods.fetch import fetch_url
+from sideroscanner.tools.blast import run_makeblastdb
+from sideroscanner.tools.cdhit import run_cdhit
 
-from scripts.fetch import fetch_url
-from scripts.tools.blast import run_makeblastdb
-from scripts.tools.cdhit import run_cdhit
-
-dbpath = abspath(dirname(argv[0]))+'/data'
-mgepath = dbpath+'/mgedb'
-plspath = dbpath+'/plsdb'
-flankpath = dbpath+'/flankdb'
+dbpath = f'{dirname(sideroscanner.__file__)}/data'
+mgepath = f'{dbpath}/mgedb'
+plspath = f'{dbpath}/plsdb'
+flankpath = f'{dbpath}/flankdb'
+furpath =  f'{dbpath}/furdb'
+iromppath = f'{dbpath}/irompdb'
+blastdb = f'{iromppath}/irompdb'
 
 def parse_args():
     parser = ArgumentParser(add_help=False,
                                      formatter_class=RawTextHelpFormatter,
-                                     usage="./sideroscanner-builddbs.py",
+                                     usage="./sideroscanner-builddbs",
                                      description='''
 SideroScannner: a tool for annotating IROMPs in bacteria
 -----------------------------------------------------------------------
@@ -103,7 +111,7 @@ def main():
         exit('[!] -db flag requires either [plsdb/mgedb/flankdb]')
 
     print('-' * int(get_terminal_size()[0]))
-    print(f'{__name__} {__version__}')
+    print(f'{__title__} {__version__}')
     print(f'Your system is {uname()[0]}')
     if 'Linux' not in uname()[0]:
         print(f'[!] Warning: scripts has not been tested on {uname()[0]}')

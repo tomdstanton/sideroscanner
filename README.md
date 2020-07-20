@@ -39,20 +39,36 @@ to these compounds.
 * Screens hit flanking genes for additional **virulence factors**.
 * Screens hit promoter regions for Fur binding sites.
 
+**Please cite:**
+```
+SideroScanner: A tool for annotating IROMPs in bacteria.
+Thomas David Stanton, 2020
+https://github.com/tomdstanton/sideroscanner
+```
 ### Dependencies
+All of the following can be installed with conda:
+
 |   sideroscanner  | sideroscanner-buildhmms | sideroscanner-builddbs |
 |:----------------:|:-----------------------:|:----------------------:|
 |   python >=3.7   |       python >=3.7      |      python >=3.7      |
-| biopython >=1.74 |     biopython >=1.74    |    biopython >=1.74    |
-| requests~=2.23.0 |     requests~=2.23.0    |    requests~=2.23.0    |
-|   tqdm~=4.29.1   |       tqdm~=4.29.1      |      tqdm~=4.29.1      |
-|   pandas~=1.0.4  |      pandas~=1.0.4      |      pandas~=1.0.4     |
 | prodigal >=2.6.3 |       hmmer >=3.3       |       blast >=2.9      |
 |    hmmer >=3.3   |       trimal >=1.4      |     cd-hit >=4.8.1     |
 |   orfm >=0.7.1   |       muscle >=3.8      |                        |
 |     optional:    |       blast >=2.9       |                        |
 |    blast >=2.9   |      cd-hit >=4.8.1     |                        |
 |   meme >=5.0.5   |                         |                        |
+
+### Installation
+Clone repo and install with python:
+```
+git clone --recursive https://github.com/tomdstanton/sideroscanner
+cd sideroscanner
+python setup.py install
+```
+Or just install with bioconda:
+```
+conda install sideroscanner
+```
 
 ## Usage
 ### Annotate
@@ -113,7 +129,9 @@ Options:
                   -----------------------------------------------
   --lib hmm       path/to/custom/HMM/library.hmm
                   -----------------------------------------------
-  -v              show version and exit
+  -v              print version and exit
+                  -----------------------------------------------
+  --logo          super secret surprise!
                   -----------------------------------------------
   -h              show this help message and exit
 ```
@@ -162,5 +180,4 @@ Options:
           -----------------------------------------------
   -h      show this help message and exit
 ```
-
 ![Image](https://github.com/tomdstanton/sideroscanner/blob/master/sideroscanner.png)
