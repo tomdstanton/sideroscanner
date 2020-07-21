@@ -168,7 +168,7 @@ def main():
         print(f'[-] Building HMM: \033[4m{c} of {total_seeds}\033[0m')
         hit_acc = seed_blast(efetch(row.acc), blastdb, parse_args().e, parse_args().w, threads)
         if hit_acc is None:
-            print(f'[!] No hits found for {row.protein} ({row.acc}), review entry in iromps.csv')
+            print(f'[!] No hits found for {row.protein} ({row.acc}), review entry')
             continue
         hit_df = db_df[db_df['accession'].isin(hit_acc)]
         hit_df.to_excel(writer, sheet_name=row.protein, index=False)
@@ -197,7 +197,7 @@ def main():
             rev_d[value] = [key]
     overlap = [value for key, value in rev_d.items() if len(value) > 1]
     if len(overlap) > 0:
-        print(f'[!] {", ".join(overlap[0])} share proteins in their seed alignments, revise entries')
+        print(f'[!] {", ".join(overlap[0])} share proteins in their seed alignments, review entries')
         print('-' * int(get_terminal_size()[0]))
     print(f'[-] HMMs written to: {iromppath}/iromps.hmm')
     if parse_args().o is not None:

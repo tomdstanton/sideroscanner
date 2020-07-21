@@ -6,7 +6,7 @@ from re import search
 import pandas as pd
 
 def make_db_df(in_file):
-    print('[>] Creating DataFrame... ', end="", flush=True)
+    print('[>] Creating DataFrame...    ', end="", flush=True)
     data = []
     for r in parse(in_file, 'fasta'):
         if search(r'GN=(.*) PE=', r.description):
