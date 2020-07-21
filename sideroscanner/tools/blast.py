@@ -48,10 +48,11 @@ def run_blastp(query, blastp_db, evalue, threads):
 def run_makeblastdb(infile, molecule, name):
     if which('makeblastdb') is None:
         exit('[!] makeblastdb not found')
-    print('[>] Running makeblastdb...')
+    print('[>] Running makeblastdb...   ', end="", flush=True)
     cmd = ['makeblastdb', '-in', infile,
            '-title', name.rsplit('/', 1)[1].split('.')[0],
            '-parse_seqids',
            '-dbtype', molecule, '-out', name]
     run(cmd, stdout=DEVNULL)
+    print('done!')
     return name

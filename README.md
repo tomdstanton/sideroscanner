@@ -4,7 +4,8 @@ _By Tom Stanton_ \
 Schneiders Lab - University of Edinburgh
 
 Issues/queries/advice?
-[email me!](T.D.Stanton@sms.ed.ac.uk)
+[email me!](T.D.Stanton@sms.ed.ac.uk) \
+(Disclaimer: I'm not a bioinformatician so there are bound to be some bugs...)
 
 [![alt text][1.1]][1]
 [![alt text][6.1]][6]
@@ -51,11 +52,11 @@ All of the following can be installed with conda:
 |   sideroscanner  | sideroscanner-buildhmms | sideroscanner-builddbs |
 |:----------------:|:-----------------------:|:----------------------:|
 |   python >=3.7   |       python >=3.7      |      python >=3.7      |
-| prodigal >=2.6.3 |       hmmer >=3.3       |       blast >=2.9      |
+| prodigal >=2.6.3 |       hmmer >=3.3       |      blast+ >=2.9      |
 |    hmmer >=3.3   |       trimal >=1.4      |     cd-hit >=4.8.1     |
 |   orfm >=0.7.1   |       muscle >=3.8      |                        |
-|     optional:    |       blast >=2.9       |                        |
-|    blast >=2.9   |      cd-hit >=4.8.1     |                        |
+|   **optional:**  |       blast+ >=2.9      |                        |
+|   blast+ >=2.9   |      cd-hit >=4.8.1     |                        |
 |   meme >=5.0.5   |                         |                        |
 
 ### Installation
@@ -65,21 +66,16 @@ git clone --recursive https://github.com/tomdstanton/sideroscanner
 cd sideroscanner
 python setup.py install
 ```
-Or just install with bioconda:
-```
-conda install sideroscanner
-```
-
 ## Usage
 ### Annotate
 **Example commands:**
 * Scan some gzipped fasta files and export results: \
-```sideroscanner.py -i path/to/*.fna.gz -o results.csv -e annotated_sideroscanner.faa```
+```sideroscanner -i path/to/*.fna.gz -o results.csv -e annotated_sideroscanner.faa```
 * Annotate a protein from NCBI: \
-```efetch -db protein -id "WP_004151913.1" -format fasta | sideroscanner.py -i -```
+```efetch -db protein -id "WP_004151913.1" -format fasta | sideroscanner -i -```
 * Scan an assembly, determine flanking genes, genomic location of hits
 and putative Fur-binding-sites 300bp upstream of hits: \
-```sideroscanner.py -i genome.fna -b 300 -f -l```
+```sideroscanner -i genome.fna -b 300 -f -l```
 
 **Example output:**
 
@@ -140,11 +136,11 @@ By default, SideroScanner comes with just the IROMP HMM library.
 * The hit location command (```-l```) uses [PLSDB](https://ccb-microbe.cs.uni-saarland.de/plsdb/)
 and [ICEBerg2.0](https://db-mml.sjtu.edu.cn/ICEberg/),
 however it will work if either one is absent: \
-```./sideroscanner-builddbs.py -db plsdb mgedb```
+```./sideroscanner-builddbs -db plsdb mgedb```
 * The flank command (```-f```) uses a concatenated, non-redundant database from
 [Patric-VF](https://www.patricbrc.org/), [Victors](http://www.phidias.us/victors/index.php)
 and [VFDB](http://www.mgc.ac.cn/VFs/main.htm): \
-```./sideroscanner-builddbs.py -db flankdb```
+```./sideroscanner-builddbs -db flankdb```
 * The Fur binding site command (```-b```) uses a concatenated 
 Fur-box pwm from [CollecTF](http://www.collectf.org/browse/home/) which
 unfortunately cannot be downloaded, but comes with SideroScanner.
@@ -157,11 +153,13 @@ Options:
                         -----------------------------------------------
   -h                    show this help message and exit
 ```
+* There might be some bugs if either the plsdb/mgedb is downloaded without the other
+so it safer to download both.
 ### Build HMM library
 Adding new HMMs to the library is easy!
 * Just append your new reference protein to ```iromps.csv``` in the ```data``` folder
 and run: \
-```./sideroscanner-buildhmms.py```
+```./sideroscanner-buildhmms```
 * You then have the option of either appending the new HMM to the library or 
 rebuilding it from scratch with your chosen options.
 ```

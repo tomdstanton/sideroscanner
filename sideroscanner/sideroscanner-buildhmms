@@ -10,7 +10,7 @@ __license__ = 'gpl-3.0'
 
 from argparse import RawTextHelpFormatter, ArgumentParser
 from datetime import datetime
-from os import cpu_count, remove, uname, path
+from os import cpu_count, remove, uname, path, stat
 from shutil import get_terminal_size
 import pandas as pd
 from Bio.SeqIO import to_dict, parse
@@ -37,8 +37,7 @@ def parse_args():
                                      usage="./sideroscanner-buildhmms",
                                      description='''
 SideroScannner: a tool for annotating IROMPs in bacteria
-----------------------------------------------------------
-Please cite: Stanton et al, 2020''')
+----------------------------------------------------------''')
     group = parser.add_argument_group("Options")
     group.add_argument('-o', metavar='-', nargs='?', type=str,
                        const=f'seed_alignment_{datetime.today().strftime("%d%m%y_%H%M")}.xlsx',
@@ -82,7 +81,9 @@ def main():
     if path.isfile(lib):
         answer = None
         while answer not in ("append", "overwrite", "exit" ):
-            answer = input(f'[!] IROMP HMM library already exists, append, overwrite or exit? [a/o/e]: ')
+            answer = input(f'[!] IROMP HMM library already exists, '
+                           f'\033[4ma\033[0mppend, \033[4mo\033[0mverwrite or '
+                           f'\033[4me\033[0mxit? [a/o/e]: ')
             if answer == "a":
                 append = True
                 break
@@ -113,7 +114,7 @@ def main():
         fastadb = run_cdhit(get_fastadb(iromppath), 1)
         run_makeblastdb(fastadb, 'prot', blastdb)
 
-    elif files[1] is False and files[2] is False:
+    elif files[1] is False or stat(files[1]).st_size < 300000000 and files[2] is False:
         fastadb = run_cdhit(proteins, 1)
         run_makeblastdb(fastadb, 'prot', blastdb)
 

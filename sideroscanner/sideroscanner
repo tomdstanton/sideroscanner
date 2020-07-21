@@ -45,8 +45,7 @@ def parse_args():
                                      usage="sideroscanner -i query.fasta",
                                      description='''
 SideroScannner: a tool for annotating IROMPs in bacteria
------------------------------------------------------------------
-Please cite: Stanton et al, 2020''')
+-----------------------------------------------------------------''')
     group = parser.add_argument_group("Options")
 
     group.add_argument('-i', metavar='-', nargs='*', type=str,
@@ -135,7 +134,7 @@ def main():
     lib = parse_args().lib
     if not path.isfile(lib):
         exit(f'[!] {lib} is not a valid file \n'
-             f'[!] Try running: ./sideroscanner-buildhmms.py')
+             f'[!] Try running: sideroscanner-buildhmms')
     else:
         for i in [".h3i", ".h3p", ".h3f", ".h3m"]:
             if not path.isfile(f'{lib}{i}'):
@@ -146,12 +145,12 @@ def main():
     if parse_args().f is not None:
         if not path.isfile(flankpath+'/flankdb.psq'):
             exit(f'[!] {flankpath}/flankdb.psq not found\n'
-                 f'[!] Try running: sideroscanner-builddbs.py -db flankdb')
+                 f'[!] Try running: sideroscanner-builddbs -db flankdb')
 
     if parse_args().l is not None:
         if not path.isfile(plspath+'/plsdb.fna.nsq') and not path.isfile(mgepath+'/mgedb.nsq'):
             exit(f'[!] {plspath}/plsdb.fna.nsq and {mgepath}/mgedb.nsq not found\n'
-                 f'[!] Try running: sideroscanner-builddbs.py -db plsdb mgedb')
+                 f'[!] Try running: sideroscanner-builddbs -db plsdb mgedb')
 
     if parse_args().b is not None:
         if not path.isfile(furpath+'/fur.meme'):
@@ -228,16 +227,13 @@ def main():
             proteins = run_orfm(seq)
 
         else:
-            lengths = []
-            for r in parse(seq, 'fasta'):
-                lengths.append(len(r.seq) < 10000)
-
-            if not all(lengths) is True and stat(seq).st_size >= 531000:
+            length = [len(r.seq) for r in parse(seq, 'fasta')]
+            ave = sum(length) / len(length)
+            if ave > 2000 and stat(seq).st_size >= 531000:
                 input_type = 'genome'
                 print(f'[-] Guessing {input_type} input: \033[4m{name}\033[0m')
-                if lengths.count(True) > 50 or len(lengths) > 1000:
+                if len([g < 10000 for g in length]) > 50 or len(length) > 1000:
                     lowqual = True
-
                 proteins = run_prodigal(seq, lowqual).replace('*', '')
                 if proteins.count('>') > 7500:
                     print('\n[!] Too many CDS, switching to low quality mode')

@@ -23,6 +23,12 @@ setup(
     author_email='T.D.Stanton@sms.ed.ac.uk',
     keywords='microbial genomics amr virulence',
     description='A tool for annotating IROMPs in bacteria',
+    long_description='Accuracy annotates Iron Regulated Outer Membrane '
+                     'Proteins in bacteria and aims to provide as much '
+                     'biologically relevent information as possible for '
+                     'downstream wet/dry-lab validation.',
     install_requires=requirements,
-    zip_safe=False
+    zip_safe=False,
+    test_suite='nose.collector',
+    tests_require=['nose'],
 )
