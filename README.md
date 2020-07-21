@@ -38,7 +38,7 @@ to these compounds.
 *Extra features for assemblies:*
 * Screens for **plasmids/MGEs** to determine genomic location of hits.
 * Screens hit flanking genes for additional **virulence factors**.
-* Screens hit promoter regions for Fur binding sites.
+* Screens hit promoter regions for **Fur binding sites**.
 
 **Please cite:**
 ```
