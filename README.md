@@ -79,9 +79,26 @@ and putative Fur-binding-sites 300bp upstream of hits: \
 
 **Example output:**
 
-| query          | hit   | description   |   score |   len |   kDa |
-|:---------------|:------|:--------------|--------:|------:|------:|
-| WP_004151913.1 | Fiu   | DHBS receptor |    1314 |   761 |  81.6 |
+| query            | hit           | description             |   score |   len |   kDa |   start |     end |   str | fur_start   | fur_end   | p_value   | fur_box                                            |
+|:-----------------|:--------------|:------------------------|--------:|------:|------:|--------:|--------:|------:|:------------|:----------|:----------|:---------------------------------------------------|
+| NC_012731.1_3308 | CirA          | DHBS/colicin receptor   |  1263.2 |   657 |  73   | 3648572 | 3650545 |    -1 | 3650715     | 3650765   | 8.16e-05  | TCATAATTGTATTGATAATCGTAATCATTATCTTTATCATTTTCGCCCAT |
+| NC_012731.1_2780 | FitA          | Coprogen receptor       |  1158.3 |   690 |  75.6 | 3033742 | 3035814 |     1 | 3033280     | 3033330   | 9.24e-05  | CTGCAGTCAAATCAAAATAAATCTCATTCTCTTTTGATCATGACGGGGAT |
+| NC_012731.1_857  | FhuA          | Ferrichrome receptor    |  1083.7 |   735 |  81.4 |  981000 |  983207 |     1 | 980937      | 980987    | 2.41e-05  | ATCGCCCGTCATAATAATAATTCTCGTTTACGTTATCATTCACTTTCATC |
+| NC_012731.1_2580 | YncD          | TonB-dependent receptor |  1171.9 |   701 |  77.1 | 2835886 | 2837991 |     1 | -           | -         | -         | -                                                  |
+| NC_012731.1_1970 | PfeA_ortholog | Enterobactin receptor   |  1310   |   727 |  80.1 | 2188602 | 2190785 |    -1 | 2190821     | 2190871   | 1.08e-05  | GAGAATATTAATGATAACAATTATCATTACAATGTAACGAGATGAATCTC |
+| NC_012731.1_1976 | Fiu           | DHBS receptor           |  1314.7 |   761 |  81.5 | 2194552 | 2196837 |    -1 | 2197257     | 2197307   | 9.83e-06  | TGGTGATGGCCCCGGGATGGATCCGCACCGAGCTCGGCGGGGCAGATGCC |
+| NC_012731.1_1322 | FepA          | Enterobactin receptor   |  1264.5 |   742 |  82.3 | 1489016 | 1491244 |    -1 | 1491398     | 1491448   | 2.24e-06  | TGATAATATTATTGATAACTATTTGCATTTGCAATAGCGTATTAGCGCGC |
+| NC_012731.1_269  | FepA          | Enterobactin receptor   |  1215.9 |   752 |  82.7 |  318496 |  320754 |     1 | 318189      | 318239    | 3.15e-05  | CGGTAATAAAAATGAGATTCATTATCAAGATGATAATAATCAATATCGGA |
+| NC_012731.1_3133 | IroN          | Salmochelin receptor    |  1365   |   724 |  79   | 3433588 | 3435762 |    -1 | -           | -         | -         | -                                                  |
+| NC_006625.1_15   | IroN          | Salmochelin receptor    |  1333.2 |   724 |  79.3 |   13666 |   15840 |    -1 | 15930       | 15980     | 1.31e-05  | ATCGTAAGTAATGATAATTATTATCATTTGTGGGGAAGAAATTCAACCCT |
+| NC_012731.1_2971 | FoxA          | Ferrioxamine receptor   |  1291.2 |   706 |  77.4 | 3248320 | 3250440 |     1 | -           | -         | -         | -                                                  |
+| NC_012731.1_3123 | FyuA          | Yersiniabactin receptor |  1488.2 |   673 |  73.7 | 3424261 | 3426282 |     1 | -           | -         | -         | -                                                  |
+| NC_006625.1_25   | FecA          | Ferric-citrate receptor |  1487.3 |   708 |  78.4 |   27193 |   29319 |     1 | -           | -         | -         | -                                                  |
+| NC_012731.1_106  | BtuB          | Vitamin B12 receptor    |  1055.6 |   612 |  68.1 |  117391 |  119229 |     1 | 117196      | 117246    | 8.51e-05  | GTCTGCACCGAGTGCGCTCATTTCTCACCTTCCTTACCGCTGCGCGTCAG |
+| NC_012731.1_3784 | HmuR          | Hemin receptor          |  1570.7 |   787 |  86.3 | 4179655 | 4182018 |     1 | 4179509     | 4179559   | 3.94e-05  | TTTGTTGCAAACGATAATACCTATCATTACCATTCGCAATCAACAAATGG |
+| NC_012731.1_1250 | FcuA          | Ferrichrome receptor    |   811   |   732 |  79.2 | 1406993 | 1409191 |     1 | -           | -         | -         | -                                                  |
+| NC_006625.1_214  | IutA          | Aerobactin receptor     |  1316.5 |   733 |  80.9 |  209679 |  211880 |    -1 | 212075      | 212125    | 7.51e-05  | GGGTTCGGCGATGCCATGGGTTTGCATACTGGCGTTGACCGCGAAGATGT |
+| NC_012731.1_1819 | IutA          | Aerobactin receptor     |  1319.7 |   729 |  80.5 | 2043670 | 2045859 |    -1 | -           | -         | -         | -                                                  |
 
 * Results are printed in markdown format so they can be pasted easily
 into a variety of different programs and it looks nice(ish)! However
