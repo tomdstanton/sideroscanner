@@ -20,7 +20,7 @@ Issues/queries/advice?
 * Annotates IROMPs with accuracy, sensitvity and speed!
 * IROMP = **I**ron **R**egulated **O**uter **M**embrane **P**rotein
 
-* Aims to provide as much biologically relevent information as possible for
+* Aims to provide as much biologically relevant information as possible for
 downstream wet/dry-lab validation.
 
 *Why do we care about these proteins?*
