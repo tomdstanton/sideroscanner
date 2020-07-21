@@ -31,9 +31,9 @@ have a role in mediating **resistance**
 to these compounds.
 
 *How does it work?*
-1. Takes AA or DNA fasta (translates DNA to AA)
-2. Iteratively filters proteins with conserved IROMP domain architchture.
-5. Annotates them with a curated HMM library.
+1. Takes AA or DNA fasta (translates DNA to AA).
+2. Iteratively filters proteins with conserved IROMP domain architecture.
+3. Annotates them with a curated HMM library.
 
 *Extra features for assemblies:*
 * Screens for **plasmids/MGEs** to determine genomic location of hits.
