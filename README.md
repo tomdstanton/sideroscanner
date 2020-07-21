@@ -73,11 +73,10 @@ python setup.py install
 ```sideroscanner -i path/to/*.fna.gz -o results.csv -e annotated_sideroscanner.faa```
 * Annotate a protein from NCBI: \
 ```efetch -db protein -id "WP_004151913.1" -format fasta | sideroscanner -i -```
-* Scan an assembly, determine flanking genes, genomic location of hits
-and putative Fur-binding-sites 300bp upstream of hits: \
-```sideroscanner -i genome.fna -b 300 -f -l```
+* Scan an assembly and look for putative Fur-binding-sites 500bp upstream of hits: \
+```sideroscanner -i NTUH-K2044_genomic.fna -b 500```
 
-**Example output:**
+**Example output of the above command:**
 
 | query            | hit           | description             |   score |   len |   kDa |   start |     end |   str | fur_start   | fur_end   | p_value   | fur_box                                            |
 |:-----------------|:--------------|:------------------------|--------:|------:|------:|--------:|--------:|------:|:------------|:----------|:----------|:---------------------------------------------------|
