@@ -87,7 +87,7 @@ def main():
                       f'{seed_df[seed_df["protein"] == name].to_string(header=False, index=False)}')
                 answer = input(f'[!] Overwrite entry with |{name}|{accession}|{description}| [y/n]: ')
                 if answer == "y":
-                    seed_df = seed_df[seed_df.protien != name]
+                    seed_df = seed_df[seed_df.protein != name]
                     seed_df = seed_df.append({'protein': name,'acc': accession,
                                     'desc': description}, ignore_index=True)
                     seed_df.to_csv(iromppath + '/iromps.csv', index=False)
