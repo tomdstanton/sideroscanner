@@ -88,11 +88,11 @@ def main():
                 answer = input(f'[!] Overwrite entry with |{name}|{accession}|{description}| [y/n]: ')
                 if answer == "y":
                     seed_df = seed_df[seed_df.protien != name]
-                    seed_df.append({'protein': name,'acc': accession,
+                    seed_df = seed_df.append({'protein': name,'acc': accession,
                                     'desc': description}, ignore_index=True)
                     seed_df.to_csv(iromppath + '/iromps.csv', index=False)
                     print(f'[-] Replaced {name}! Now run sideroscanner-buildhmms to add the hmm')
-                    print("[!] Don't forget to overwrite the IROMP HMM library to remove the old entry!")
+                    exit("[!] Don't forget to overwrite the IROMP HMM library to remove the old entry!")
                 elif answer == "n":
                     exit('[!] Exiting')
                 else:
@@ -100,10 +100,10 @@ def main():
             else:
                 answer = input(f'[!] Append |{name}|{accession}|{description}| to reference table? [y/n]: ')
                 if answer == "y":
-                    seed_df.append({'protein': name,'acc': accession,
+                    seed_df = seed_df.append({'protein': name,'acc': accession,
                                     'desc': description}, ignore_index=True)
                     seed_df.to_csv(iromppath + '/iromps.csv', index=False)
-                    print(f'[-] Added {name}! Now run sideroscanner-buildhmms to add the hmm')
+                    exit(f'[-] Added {name}! Now run sideroscanner-buildhmms to add the hmm')
                 elif answer == "n":
                     exit('[!] Exiting')
                 else:
@@ -145,12 +145,12 @@ def main():
     print('-' * int(get_terminal_size()[0]))
 
     proteins, fastadb = f'{iromppath}/iromps.faa', f'{iromppath}/iromps_nr.faa'
-    if not path.isfile(blastdb+'.psq') or stat(blastdb+'.psq').st_size > 290816000:
-        if not path.isfile(fastadb) or stat(fastadb).st_size > 339968000:
-            if not path.isfile(proteins) or stat(proteins).st_size > 368640000:
+    if not path.isfile(blastdb+'.psq') or stat(blastdb+'.psq').st_size < 280816000:
+        if not path.isfile(fastadb) or stat(fastadb).st_size < 329968000:
+            if not path.isfile(proteins) or stat(proteins).st_size < 358640000:
                 fastadb = run_cdhit(get_fastadb(iromppath), 1)
             else: fastadb = run_cdhit(proteins, 1)
-        else: run_makeblastdb(fastadb, 'prot', blastdb)
+        run_makeblastdb(fastadb, 'prot', blastdb)
 
     total_seeds = len(seed_df.index)
     db_df = make_db_df(fastadb)
