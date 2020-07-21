@@ -136,11 +136,11 @@ By default, SideroScanner comes with just the IROMP HMM library.
 * The hit location command (```-l```) uses [PLSDB](https://ccb-microbe.cs.uni-saarland.de/plsdb/)
 and [ICEBerg2.0](https://db-mml.sjtu.edu.cn/ICEberg/),
 however it will work if either one is absent: \
-```./sideroscanner-builddbs -db plsdb mgedb```
+```sideroscanner-builddbs -db plsdb mgedb```
 * The flank command (```-f```) uses a concatenated, non-redundant database from
 [Patric-VF](https://www.patricbrc.org/), [Victors](http://www.phidias.us/victors/index.php)
 and [VFDB](http://www.mgc.ac.cn/VFs/main.htm): \
-```./sideroscanner-builddbs -db flankdb```
+```sideroscanner-builddbs -db flankdb```
 * The Fur binding site command (```-b```) uses a concatenated 
 Fur-box pwm from [CollecTF](http://www.collectf.org/browse/home/) which
 unfortunately cannot be downloaded, but comes with SideroScanner.
@@ -156,26 +156,30 @@ Options:
 * There might be some bugs if either the plsdb/mgedb is downloaded without the other
 so it safer to download both.
 ### Build HMM library
-Adding new HMMs to the library is easy!
-* Just append your new reference protein to ```iromps.csv``` in the ```data``` folder
-and run: \
-```./sideroscanner-buildhmms```
+* Adding new HMMs to the library is easy! Just run the following command
+and follow the promts to enter a protein name, **valid** NCBI accession
+and a short description:\
+```sideroscanner-buildhmms --append```
 * You then have the option of either appending the new HMM to the library or 
 rebuilding it from scratch with your chosen options.
 ```
 Options:
-  -o [-]  save info about proteins in seed alignment
-          [optional: path/to/output/file]
-          [default: seed_alignment_DDMMYY_hhmm.xlsx]
-          -----------------------------------------------
-  -w int  protein length window [default: 2]
-          -----------------------------------------------
-  -e str  evalue for blastp [default: 1e-130]
-          -----------------------------------------------
-  -t int  number of threads [default: max cpus]
-          -----------------------------------------------
-  --keep  keep seed alignments
-          -----------------------------------------------
-  -h      show this help message and exit
+  -o [-]    save info about proteins in seed alignment
+            [optional: path/to/output/file]
+            [default: seed_alignment_DDMMYY_hhmm.xlsx]
+            -----------------------------------------------
+  -w int    protein length window [default: 2]
+            -----------------------------------------------
+  -e str    evalue for blastp [default: 1e-130]
+            -----------------------------------------------
+  -t int    number of threads [default: max cpus]
+            -----------------------------------------------
+  --keep    keep seed alignments
+            -----------------------------------------------
+  --review  print table of reference proteins for inspection
+            -----------------------------------------------
+  --append  add new protein to reference table
+            -----------------------------------------------
+  -h        show this help message and exit
 ```
 ![Image](https://github.com/tomdstanton/sideroscanner/blob/master/sideroscanner.png)

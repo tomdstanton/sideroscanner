@@ -29,8 +29,6 @@ dbpath = f'{path.dirname(sideroscanner.__file__)}/data'
 iromppath = f'{dbpath}/irompdb'
 blastdb = f'{iromppath}/irompdb'
 lib = f'{iromppath}/iromps.hmm'
-proteins = f'{iromppath}/iromps.faa'
-clustered = f'{iromppath}/iromps_nr.faa'
 
 def parse_args():
     parser = ArgumentParser(add_help=False, formatter_class=RawTextHelpFormatter,
@@ -57,25 +55,59 @@ SideroScannner: a tool for annotating IROMPs in bacteria
     group.add_argument('--keep', action='store_true',default=False,
                        help='''keep seed alignments
 -----------------------------------------------''')
+    group.add_argument('--review', action='store_true', default=False,
+                       help='''print table of reference proteins for inspection
+-----------------------------------------------''')
+    group.add_argument('--append', action='store_true', default=False,
+                       help='''add new protein to reference table
+-----------------------------------------------''')
     group.add_argument("-h", action="help", help='''show this help message and exit''')
     return parser.parse_args()
 
 
 def main():
-    print('-' * int(get_terminal_size()[0]))
-    print(f'{__title__} {__version__}')
-    print(f'Your system is {uname()[0]}')
-    if 'Linux' not in uname()[0]:
-        print(f'[!] Warning: scripts has not been tested on {uname()[0]}')
-    print(datetime.today().strftime('%Y-%m-%d-%H:%M:%S'))
-    print(f'Using {threads} threads...')
-    print('-' * int(get_terminal_size()[0]))
-
     if not path.isdir(iromppath):
         exit(f'[!] {iromppath} is not an existing directory')
 
     if not path.isfile(iromppath+'/iromps.csv'):
         exit(f'[!] {iromppath}/iromps.csv not found')
+
+    seed_df = pd.read_csv(iromppath + '/iromps.csv')
+    if parse_args().review is True:
+        exit(seed_df.to_markdown(showindex=False))
+
+    if parse_args().append is True:
+        name = input("[-] Enter protein name (e.g. Fiu): ").strip()
+        accession = input("[-] Enter NCBI accession (e.g. WP_004151913.1): ").strip()
+        description = input("[-] Enter description (e.g. DHBS receptor): ").strip()
+        answer = None
+        while answer not in ("y", "n"):
+            if name in seed_df["protein"].tolist():
+                print(f'[!] {name} exists in reference table:'
+                      f'{seed_df[seed_df["protein"] == name].to_string(header=False, index=False)}')
+                answer = input(f'[!] Overwrite entry with |{name}|{accession}|{description}| [y/n]: ')
+                if answer == "y":
+                    seed_df = seed_df[seed_df.protien != name]
+                    seed_df.append({'protein': name,'acc': accession,
+                                    'desc': description}, ignore_index=True)
+                    seed_df.to_csv(iromppath + '/iromps.csv', index=False)
+                    print(f'[-] Replaced {name}! Now run sideroscanner-buildhmms to add the hmm')
+                    print("[!] Don't forget to overwrite the IROMP HMM library to remove the old entry!")
+                elif answer == "n":
+                    exit('[!] Exiting')
+                else:
+                    print("[!] Please enter either [y] or [n]: ")
+            else:
+                answer = input(f'[!] Append |{name}|{accession}|{description}| to reference table? [y/n]: ')
+                if answer == "y":
+                    seed_df.append({'protein': name,'acc': accession,
+                                    'desc': description}, ignore_index=True)
+                    seed_df.to_csv(iromppath + '/iromps.csv', index=False)
+                    print(f'[-] Added {name}! Now run sideroscanner-buildhmms to add the hmm')
+                elif answer == "n":
+                    exit('[!] Exiting')
+                else:
+                    print("[!] Please enter either [y] or [n]: ")
 
     append = False
     if path.isfile(lib):
@@ -103,28 +135,24 @@ def main():
             if path.isfile(f'{lib}{i}'):
                 remove(f'{lib}{i}')
 
-    seed_df = pd.read_csv(iromppath+'/iromps.csv')
+    print('-' * int(get_terminal_size()[0]))
+    print(f'{__title__} {__version__}')
+    print(f'Your system is {uname()[0]}')
+    if 'Linux' not in uname()[0]:
+        print(f'[!] Warning: scripts has not been tested on {uname()[0]}')
+    print(datetime.today().strftime('%Y-%m-%d-%H:%M:%S'))
+    print(f'Using {threads} threads...')
+    print('-' * int(get_terminal_size()[0]))
+
+    proteins, fastadb = f'{iromppath}/iromps.faa', f'{iromppath}/iromps_nr.faa'
+    if not path.isfile(blastdb+'.psq') or stat(blastdb+'.psq').st_size > 290816000:
+        if not path.isfile(fastadb) or stat(fastadb).st_size > 339968000:
+            if not path.isfile(proteins) or stat(proteins).st_size > 368640000:
+                fastadb = run_cdhit(get_fastadb(iromppath), 1)
+            else: fastadb = run_cdhit(proteins, 1)
+        else: run_makeblastdb(fastadb, 'prot', blastdb)
+
     total_seeds = len(seed_df.index)
-    files = []
-
-    for f in [proteins, clustered, blastdb+'.psq']:
-        files.append(path.isfile(f))
-    
-    if True not in files:
-        fastadb = run_cdhit(get_fastadb(iromppath), 1)
-        run_makeblastdb(fastadb, 'prot', blastdb)
-
-    elif files[1] is False or stat(files[1]).st_size < 300000000 and files[2] is False:
-        fastadb = run_cdhit(proteins, 1)
-        run_makeblastdb(fastadb, 'prot', blastdb)
-
-    elif files[2] is False:
-        run_makeblastdb(clustered, 'prot', blastdb)
-        fastadb = clustered
-
-    else:
-        fastadb = clustered
-
     db_df = make_db_df(fastadb)
     db_dict = to_dict(parse(fastadb, 'fasta'))
     writer = pd.ExcelWriter(f'{parse_args().o}', engine='xlsxwriter')
