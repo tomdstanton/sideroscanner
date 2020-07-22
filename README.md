@@ -49,7 +49,7 @@ https://github.com/tomdstanton/sideroscanner
 ### Dependencies
 ```
 python ~=3.7.6
-meme >=5.0.5
+meme >=5.0.5 (older meme versions have a different output and will break!)
 prodigal >=2.6.3
 hmmer >=3.3
 blast >=2.9.0
