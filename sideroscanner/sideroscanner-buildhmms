@@ -37,7 +37,7 @@ def parse_args():
 SideroScannner: a tool for annotating IROMPs in bacteria
 ----------------------------------------------------------''')
     group = parser.add_argument_group("Options")
-    group.add_argument('-o', metavar='-', nargs='?', type=str,
+    group.add_argument('--report', metavar='-', nargs='?', type=str,
                        const=f'seed_alignment_{datetime.today().strftime("%d%m%y_%H%M")}.xlsx',
                        help='''save info about proteins in seed alignment
 [optional: path/to/output/file]
@@ -155,7 +155,7 @@ def main():
     total_seeds = len(seed_df.index)
     db_df = make_db_df(fastadb)
     db_dict = to_dict(parse(fastadb, 'fasta'))
-    writer = pd.ExcelWriter(f'{parse_args().o}', engine='xlsxwriter')
+    writer = pd.ExcelWriter(f'{parse_args().report}', engine='xlsxwriter')
     c = 0
     d = {}
     for row in seed_df.itertuples():
@@ -167,7 +167,7 @@ def main():
         c = c + 1
         print(f'[-] Building HMM: \033[4m{c} of {total_seeds}\033[0m')
         hit_acc = seed_blast(efetch(row.acc), blastdb, parse_args().e, parse_args().w, threads)
-        if hit_acc is None:
+        if None in hit_acc:
             print(f'[!] No hits found for {row.protein} ({row.acc}), review entry')
             continue
         hit_df = db_df[db_df['accession'].isin(hit_acc)]
@@ -200,9 +200,9 @@ def main():
         print(f'[!] {", ".join(overlap[0])} share proteins in their seed alignments, review entries')
         print('-' * int(get_terminal_size()[0]))
     print(f'[-] HMMs written to: {iromppath}/iromps.hmm')
-    if parse_args().o is not None:
+    if parse_args().report is not None:
         writer.save()
-        print(f'[-] Info written to: {parse_args().o}')
+        print(f'[-] Info written to: {parse_args().report}')
 
 if __name__ == "__main__":
     if parse_args().t > cpu_count():
