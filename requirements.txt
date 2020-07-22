@@ -12,4 +12,3 @@ trimal>=1.4.1
 orfm >=0.7.1
 muscle ~=3.8.1551
 cd-hit >=4.8.1
-meme >=5.0.5

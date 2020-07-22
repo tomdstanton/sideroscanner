@@ -47,24 +47,11 @@ Thomas David Stanton, 2020
 https://github.com/tomdstanton/sideroscanner
 ```
 ### Dependencies
-All of the following can be installed with conda:
-```
-requests >=2.23.0
-tqdm >=4.29.1
-pandas >=1.0.4
-biopython >=1.77
-tabulate ~=0.8.7
-xlsxwriter ~=1.2.9
-python ~=3.7.6
-prodigal >=2.6.3
-hmmer >=3.3
-blast >=2.9.0
-trimal >=1.4.1
-orfm >=0.7.1
-muscle ~=3.8.1551
-cd-hit >=4.8.1
-meme >=5.0.5
-```
+All dependencies are contained in ```requirements.txt``` and
+should be installed when running ```setup.py```.
+The only additional dependency is ```meme >=5.0.5```
+which can be installed with conda.
+
 ### Installation
 Clone repo and install with python:
 ```
