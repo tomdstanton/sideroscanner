@@ -48,6 +48,7 @@ https://github.com/tomdstanton/sideroscanner
 ```
 ### Dependencies
 ```
+python ~=3.7.6
 meme >=5.0.5
 prodigal >=2.6.3
 hmmer >=3.3
