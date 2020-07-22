@@ -48,6 +48,7 @@ https://github.com/tomdstanton/sideroscanner
 ```
 ### Dependencies
 All of the following can be installed with conda:
+```
 requests >=2.23.0
 tqdm >=4.29.1
 pandas >=1.0.4
@@ -63,7 +64,7 @@ orfm >=0.7.1
 muscle ~=3.8.1551
 cd-hit >=4.8.1
 meme >=5.0.5
-
+```
 ### Installation
 Clone repo and install with python:
 ```
