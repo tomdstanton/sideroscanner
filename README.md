@@ -48,16 +48,21 @@ https://github.com/tomdstanton/sideroscanner
 ```
 ### Dependencies
 All of the following can be installed with conda:
-
-|   sideroscanner  | sideroscanner-buildhmms | sideroscanner-builddbs |
-|:----------------:|:-----------------------:|:----------------------:|
-|   python >=3.7   |       python >=3.7      |      python >=3.7      |
-| prodigal >=2.6.3 |       hmmer >=3.3       |      blast+ >=2.9      |
-|    hmmer >=3.3   |       trimal >=1.4      |     cd-hit >=4.8.1     |
-|   orfm >=0.7.1   |       muscle >=3.8      |                        |
-|   **optional:**  |       blast+ >=2.9      |                        |
-|   blast+ >=2.9   |      cd-hit >=4.8.1     |                        |
-|   meme >=5.0.5   |                         |                        |
+requests >=2.23.0
+tqdm >=4.29.1
+pandas >=1.0.4
+biopython >=1.77
+tabulate ~=0.8.7
+xlsxwriter ~=1.2.9
+python ~=3.7.6
+prodigal >=2.6.3
+hmmer >=3.3
+blast >=2.9.0
+trimal >=1.4.1
+orfm >=0.7.1
+muscle ~=3.8.1551
+cd-hit >=4.8.1
+meme >=5.0.5
 
 ### Installation
 Clone repo and install with python:
@@ -180,22 +185,22 @@ and a short description:\
 rebuilding it from scratch with your chosen options.
 ```
 Options:
-  -o [-]    save info about proteins in seed alignment
-            [optional: path/to/output/file]
-            [default: seed_alignment_DDMMYY_hhmm.xlsx]
-            -----------------------------------------------
-  -w int    protein length window [default: 2]
-            -----------------------------------------------
-  -e str    evalue for blastp [default: 1e-130]
-            -----------------------------------------------
-  -t int    number of threads [default: max cpus]
-            -----------------------------------------------
-  --keep    keep seed alignments
-            -----------------------------------------------
-  --review  print table of reference proteins for inspection
-            -----------------------------------------------
-  --append  add new protein to reference table
-            -----------------------------------------------
-  -h        show this help message and exit
+  --report [-]    save info about proteins in seed alignment
+                  [optional: path/to/output/file]
+                  [default: seed_alignment_DDMMYY_hhmm.xlsx]
+                  -----------------------------------------------
+  -w int          protein length window [default: 2]
+                  -----------------------------------------------
+  -e str          evalue for blastp [default: 1e-130]
+                  -----------------------------------------------
+  -t int          number of threads [default: max cpus]
+                  -----------------------------------------------
+  --keep          keep seed alignments
+                  -----------------------------------------------
+  --review        print table of reference proteins for inspection
+                  -----------------------------------------------
+  --append        add new protein to reference table
+                  -----------------------------------------------
+  -h              show this help message and exit
 ```
 ![Image](https://github.com/tomdstanton/sideroscanner/blob/master/sideroscanner.png)
