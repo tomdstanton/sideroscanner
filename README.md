@@ -163,7 +163,7 @@ Options:
 so it safer to download both.
 ### Build HMM library
 * Adding new HMMs to the library is easy! Just run the following command
-and follow the promts to enter a protein name, **valid** NCBI accession
+and follow the prompts to enter a protein name, **valid** NCBI accession
 and a short description:\
 ```sideroscanner-buildhmms --append```
 * You then have the option of either appending the new HMM to the library or 
