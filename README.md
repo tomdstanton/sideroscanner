@@ -166,8 +166,12 @@ so it safer to download both.
 and follow the prompts to enter a protein name, **valid** NCBI accession
 and a short description:\
 ```sideroscanner-buildhmms --append```
-* You then have the option of either appending the new HMM to the library or 
-rebuilding it from scratch with your chosen options.
+* TonB-dependent receptors will be downloaded from UniProt (~350Mb) and
+made into a non-redundant BLASTP db.
+* New proteins are blasted against the db using a defined E-value and
+size window.
+* Hits are aligned, trimmed and built into pHMMs.
+* You have the option of overwriting all HMMs or just appending your new proteins.
 ```
 Options:
   --report [-]    save info about proteins in seed alignment
