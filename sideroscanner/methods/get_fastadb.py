@@ -13,8 +13,8 @@ def get_fastadb(iromppath):
         try:
             url = 'http://www.uniprot.org/uniprot/'
             params = {'query': 'taxonomy:"Bacteria [2]" AND '
-                               'family:"tonb-dependent receptor family" AND '
-                               'locations:(location:"Cell outer membrane [SL-0040]") '
+                               #'keyword:"TonB box [KW-0798]" OR '
+                               'family:"tonb-dependent receptor family" '
                                'NOT partial NOT fragment', 'format': 'fasta'}
             return fetch_url(url, params, iromppath + '/iromps.faa')
         

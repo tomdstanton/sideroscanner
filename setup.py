@@ -8,7 +8,7 @@ with open('requirements.txt') as f:
 
 setup(
     name='SideroScanner',
-    version='0.0.1',
+    version='0.0.2',
     packages=find_packages(),
     include_package_data = True,
     package_data={'sideroscanner': ['sideroscanner/data/irompdb/iromps.csv',

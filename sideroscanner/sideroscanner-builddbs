@@ -3,7 +3,7 @@
 
 __author__ = 'Tom Stanton'
 __title__ = 'SideroScanner'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __author_email__ = 'T.D.Stanton@sms.ed.ac.uk'
 __description__ = 'A tool for annotating IROMPs in bacteria'
 __license__ = 'gpl-3.0'
@@ -43,11 +43,14 @@ SideroScannner: a tool for annotating IROMPs in bacteria
                        choices=['plsdb', 'mgedb', 'flankdb'],
                        default=['plsdb', 'mgedb', 'flankdb'],
                        metavar='plsdb/mgedb/flankdb',
-                        help='''build specific database [default: all]
+                       help='''build specific database [default: all]
 -----------------------------------------------''')
     group.add_argument('--keep', action='store_true',
                        help='''keep database fasta files
 -----------------------------------------------''')
+    group.add_argument('--overwrite', action='store_true',
+                       help='''overwrite pre-existing databases
+    -----------------------------------------------''')
     group.add_argument("-h", action="help", help='''show this help message and exit''')
     return parser.parse_args()
 
@@ -91,7 +94,12 @@ def get_flankdb():
     patric = fetch_url('ftp://ftp.patricbrc.org/specialty_genes/referenceDBs/PATRIC_VF.faa', None, flankpath + '/patric.faa')
     victors = fetch_url('http://www.phidias.us/victors/downloads/gen_downloads_protein.php', None, flankpath + '/victors.faa')
     vfdb = fetch_url('http://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas.gz', None, flankpath + '/vfdb.faa.gz')
-    filenames = [patric, victors, vfdb]
+    params = {'query': 'siderophore AND '
+                       'taxonomy:"Bacteria [2]" AND '
+                       'NOT receptor NOT partial NOT fragment', 'format': 'fasta'}
+    bgcs = fetch_url('http://www.uniprot.org/uniprot/', params, flankpath + '/bgcs.faa')
+
+    filenames = [patric, victors, vfdb, bgcs]
     with open(flankpath + '/flankdb', 'wb') as flank_file:
         for fname in filenames:
             if fname.endswith('.gz'):
@@ -109,12 +117,11 @@ def main():
     if len(parse_args().db) == 0:
         exit('[!] -db flag requires either [plsdb/mgedb/flankdb]')
 
-    print('-' * int(get_terminal_size()[0]))
-    print(f'{__title__} {__version__}')
-    print(f'Your system is {uname()[0]}')
+    print(f'[|] \033[4m{__title__} {__version__}\033[0m')
+    print(f'[|] Your system is {uname()[0]}')
     if 'Linux' not in uname()[0]:
-        print(f'[!] Warning: scripts has not been tested on {uname()[0]}')
-    print(datetime.today().strftime('%Y-%m-%d-%H:%M:%S'))
+        print(f'[!] Warning: SideroScanner has not been tested on {uname()[0]}')
+    print(f'[|] {datetime.today().strftime("%Y-%m-%d-%H:%M:%S")}')
 
     db_list = []
     for i in parse_args().db:
@@ -137,12 +144,12 @@ def main():
 
     if 'plsdb' in db_list:
         print('-' * int(get_terminal_size()[0]))
-        print("[-] \033[4mPreparing plasmid database\033[0m")
+        print("[-] Preparing plasmid database")
         get_plsdb()
 
     if 'mgedb' in db_list:
         print('-' * int(get_terminal_size()[0]))
-        print("[-] \033[4mPreparing mobile genetic element database\033[0m")
+        print("[-] Preparing mobile genetic element database")
         mgedb = get_mgedb()
         run_makeblastdb(mgedb, 'nucl', mgepath+'/mgedb')
         if parse_args().keep is False:
@@ -150,7 +157,7 @@ def main():
 
     if 'flankdb' in db_list:
         print('-' * int(get_terminal_size()[0]))
-        print("[-] \033[4mPreparing flanking virulence gene database\033[0m")
+        print("[-] Preparing flanking virulence gene database")
         flankdb = get_flankdb()
         flankdb = run_cdhit(flankdb, 1)
         run_makeblastdb(flankdb, 'prot', flankpath+'/flankdb')

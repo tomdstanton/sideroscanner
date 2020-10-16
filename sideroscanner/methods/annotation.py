@@ -14,7 +14,7 @@ def domain_filter(in_file, iromppath, lowqual, threads):
     in_file_dict = to_dict(parse(StringIO(in_file), 'fasta'))
     filter1 = ''
     for h in q.hit_keys:
-        filter1 = filter1 + in_file_dict[h].format("fasta")
+        filter1 += in_file_dict[h].format("fasta")
     print(f'Filtered {str(filter1.count(">"))} proteins with {q.description}')
     if lowqual is True or len(filter1) == 0:
         return filter1
@@ -23,7 +23,7 @@ def domain_filter(in_file, iromppath, lowqual, threads):
         filter2 = ''
         filter1_dict = to_dict(parse(StringIO(filter1), 'fasta'))
         for h in q.hit_keys:
-            filter2 = filter2 + filter1_dict[h].format("fasta")
+            filter2 += filter1_dict[h].format("fasta")
         print(f'Filtered {str(filter2.count(">"))} proteins with {q.description}')
         return filter2
 
@@ -37,9 +37,10 @@ def annotate(in_file, input_type, lib, threads):
                         f',{str(q.hits[0].bitscore)}')
         else:
             return None
-    print(f'Annotated {len(data)} proteins')
+
     hmmscan_df = pd.DataFrame([sub.split(",") for sub in data],
-                              columns=['contig', 'query', 'hit', 'description', 'score'])
+                              columns=['contig', 'query', 'hit',
+                                       'description', 'score'])
     data = []
     for r in parse(StringIO(in_file), 'fasta'):
         data.append(f'{r.id},{str(len(r.seq))},'

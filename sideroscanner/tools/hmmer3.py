@@ -21,7 +21,6 @@ def run_hmmsearch(in_file, hmm, threads):
 def run_hmmscan(in_file, hmm, threads):
     if which('hmmscan') is None:
         exit('[!] hmmscan not found')
-    print("[>] Running hmmscan...   ", end="", flush=True)
     cmd = ['hmmscan', '--noali',
            #'--domE', '0.2', '-E', '1e-50',
            '--cpu', threads, hmm, '-']

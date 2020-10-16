@@ -13,5 +13,12 @@ def seed_blast(in_file, blastdb, eval, window, threads):
             for h in q.hits:
                 if down <= h.seq_len <= up:
                     hit_acc.append(h.blast_id)
-            print(f"{len(hit_acc)} hits filtered between {down}-{up} aa")
+            if not hit_acc:
+                print("\n[!] No hits for seed within size window, consider increasing window")
+                return None
+            else:
+                print(f"{len(hit_acc)} hits filtered between {down}-{up} aa")
+        else:
+            print("\n[!] No blastp hits for seed, consider reducing E-value")
+            return None
     return hit_acc

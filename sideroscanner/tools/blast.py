@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
 from Bio import SearchIO
 from subprocess import Popen, PIPE, DEVNULL, run
 from io import StringIO
@@ -13,7 +12,6 @@ def run_blastn(query, blastn_db, cov, percid, threads):
         exit('[!] blastn not found')
     print('[>] Running blastn...    ', end="", flush=True)
     cmd = ['blastn',
-           '-query', query,
            '-db', blastn_db,
            '-soft_masking', 'true',
            '-culling_limit', '1',
@@ -23,8 +21,10 @@ def run_blastn(query, blastn_db, cov, percid, threads):
            '-num_threads', threads,
            '-max_target_seqs', '1',
            '-perc_identity', str(percid),
-           '-qcov_hsp_perc', str(cov)]
-    child = Popen(cmd, stdout=PIPE, stderr=PIPE)
+           '-qcov_hsp_perc', str(cov),
+           '-query', '-']
+    child = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
+    child.stdin.write(query.encode())
     return SearchIO.parse(StringIO(child.communicate()[0].decode('utf-8')), 'blast-tab')
 
 

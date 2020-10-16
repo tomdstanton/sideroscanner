@@ -4,20 +4,23 @@
 import requests
 from ftplib import FTP
 from tqdm import tqdm
+from sys import exit
 
 def fetch_url(url, params, outfile):
     print(f'[>] Downloading from {url}...')
     if url.startswith('ftp'):
-        url = url.replace('ftp://', '')
-        ftp = FTP(url.split('/', 1)[0])
-        ftp.login()
-        path = url.split('/', 1)[1]
-        file = path.rsplit('/', 1)[1]
-        ftp.cwd(path.rsplit('/', 1)[0])
-        with open(outfile, 'wb') as f:
-            ftp.retrbinary('RETR '+file, f.write)
-        ftp.quit()
-
+        try:
+            url = url.replace('ftp://', '')
+            ftp = FTP(url.split('/', 1)[0])
+            ftp.login()
+            path = url.split('/', 1)[1]
+            file = path.rsplit('/', 1)[1]
+            ftp.cwd(path.rsplit('/', 1)[0])
+            with open(outfile, 'wb') as f:
+                ftp.retrbinary('RETR '+file, f.write)
+            ftp.quit()
+        except requests.exceptions.HTTPError as err:
+            raise SystemExit(err)
     else:
         try:
             r = requests.get(url, params, stream=True)

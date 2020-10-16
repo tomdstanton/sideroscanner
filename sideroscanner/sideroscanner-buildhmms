@@ -3,7 +3,7 @@
 
 __author__ = 'Tom Stanton'
 __title__ = 'SideroScanner'
-__version__ = '0.0.1'
+__version__ = '0.0.2'
 __author_email__ = 'T.D.Stanton@sms.ed.ac.uk'
 __description__ = 'A tool for annotating IROMPs in bacteria'
 __license__ = 'gpl-3.0'
@@ -35,7 +35,7 @@ def parse_args():
                                      usage="./sideroscanner-buildhmms",
                                      description='''
 SideroScannner: a tool for annotating IROMPs in bacteria
-----------------------------------------------------------''')
+-----------------------------------------------------------------''')
     group = parser.add_argument_group("Options")
     group.add_argument('--report', metavar='-', nargs='?', type=str,
                        const=f'seed_alignment_{datetime.today().strftime("%d%m%y_%H%M")}.xlsx',
@@ -43,8 +43,8 @@ SideroScannner: a tool for annotating IROMPs in bacteria
 [optional: path/to/output/file]
 [default: seed_alignment_DDMMYY_hhmm.xlsx]
 -----------------------------------------------''')
-    group.add_argument('-w', metavar='int', type=int, default=2,
-                       help='''protein length window [default: 2]
+    group.add_argument('-w', metavar='int', type=int, default=3,
+                       help='''protein length window [default: 3]
 -----------------------------------------------''')
     group.add_argument('-e', metavar='str', type=str, default='1e-130',
                        help='''evalue for blastp [default: 1e-130]
@@ -55,8 +55,8 @@ SideroScannner: a tool for annotating IROMPs in bacteria
     group.add_argument('--keep', action='store_true',default=False,
                        help='''keep seed alignments
 -----------------------------------------------''')
-    group.add_argument('--review', action='store_true', default=False,
-                       help='''print table of reference proteins for inspection
+    group.add_argument('--inspect', action='store_true', default=False,
+                       help='''print table of reference proteins
 -----------------------------------------------''')
     group.add_argument('--append', action='store_true', default=False,
                        help='''add new protein to reference table
@@ -73,7 +73,7 @@ def main():
         exit(f'[!] {iromppath}/iromps.csv not found')
 
     seed_df = pd.read_csv(iromppath + '/iromps.csv')
-    if parse_args().review is True:
+    if parse_args().inspect is True:
         exit(seed_df.to_markdown(showindex=False))
 
     if parse_args().append is True:
@@ -135,51 +135,56 @@ def main():
             if path.isfile(f'{lib}{i}'):
                 remove(f'{lib}{i}')
 
-    print('-' * int(get_terminal_size()[0]))
-    print(f'{__title__} {__version__}')
-    print(f'Your system is {uname()[0]}')
+    print(f'[|] \033[4m{__title__} {__version__}\033[0m')
+    print(f'[|] Your system is {uname()[0]}')
     if 'Linux' not in uname()[0]:
-        print(f'[!] Warning: scripts has not been tested on {uname()[0]}')
-    print(datetime.today().strftime('%Y-%m-%d-%H:%M:%S'))
-    print(f'Using {threads} threads...')
+        print(f'[!] Warning: SideroScanner has not been tested on {uname()[0]}')
+    print(f'[|] {datetime.today().strftime("%Y-%m-%d-%H:%M:%S")}')
+    print(f'[|] Using {threads} threads...')
+
     print('-' * int(get_terminal_size()[0]))
 
     proteins, fastadb = f'{iromppath}/iromps.faa', f'{iromppath}/iromps_nr.faa'
-    if not path.isfile(blastdb+'.psq') or stat(blastdb+'.psq').st_size < 280816000:
-        if not path.isfile(fastadb) or stat(fastadb).st_size < 329968000:
-            if not path.isfile(proteins) or stat(proteins).st_size < 358640000:
+    if not path.isfile(blastdb+'.psq') or stat(blastdb+'.psq').st_size < 270000000: # loose size, may need adjusting
+        if not path.isfile(fastadb) or stat(fastadb).st_size < 320000000: # loose size, may need adjusting
+            if not path.isfile(proteins) or stat(proteins).st_size < 350000000: # loose size, may need adjusting
                 fastadb = run_cdhit(get_fastadb(iromppath), 1)
             else: fastadb = run_cdhit(proteins, 1)
         run_makeblastdb(fastadb, 'prot', blastdb)
 
     total_seeds = len(seed_df.index)
+    if append is True:
+        total_seeds = total_seeds - lib.count('HMMER3/f')
+
     db_df = make_db_df(fastadb)
     db_dict = to_dict(parse(fastadb, 'fasta'))
     writer = pd.ExcelWriter(f'{parse_args().report}', engine='xlsxwriter')
-    c = 0
-    d = {}
+    c, d = 0, {}
+
     for row in seed_df.itertuples():
         if append is True:
             with open(lib) as f:
                 if row.acc in f.read():
                     continue
         print('-' * int(get_terminal_size()[0]))
-        c = c + 1
-        print(f'[-] Building HMM: \033[4m{c} of {total_seeds}\033[0m')
+        c += 1
+        print(f'[-] Building HMM {c}/{total_seeds} for: {row.protein} ({row.acc})')
         hit_acc = seed_blast(efetch(row.acc), blastdb, parse_args().e, parse_args().w, threads)
-        if None in hit_acc:
-            print(f'[!] No hits found for {row.protein} ({row.acc}), review entry')
+        if hit_acc is None:
+            print(f'[!] No hits found, review entry')
             continue
         hit_df = db_df[db_df['accession'].isin(hit_acc)]
         hit_df.to_excel(writer, sheet_name=row.protein, index=False)
         hits = ''
         for h in hit_acc:
-            hits = hits + db_dict[h].format("fasta")
+            hits += db_dict[h].format("fasta")
         d[row.protein] = str(hit_acc)
         alignment = run_muscle(hits, f'{iromppath}/{row.protein}_aligned.faa')
         trimmed = run_trimal(alignment)
         if parse_args().keep is False:
             remove(alignment)
+        else:
+            print(f'[-] Seed alignment saved to: {alignment}')
         hmm = run_hmmbuild(trimmed, row.protein, f'{iromppath}/{row.protein}.hmm', threads)
         with open(hmm, 'r') as file, open(lib, "a+") as f:
             t1 = file.readlines()
@@ -188,6 +193,7 @@ def main():
             f.writelines(t1)
         print(f'added {row.protein} to HMM library')
         remove(hmm)
+
     print('-' * int(get_terminal_size()[0]))
     rev_d = {}
     for key, value in d.items():

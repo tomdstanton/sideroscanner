@@ -3,11 +3,12 @@
 
 from Bio.Seq import Seq
 from Bio.SeqIO import parse, to_dict
+from io import StringIO
 import pandas as pd
 from sideroscanner.tools.meme import run_mast
 
 def tfbs_screen(in_file, furpath, hits, length):
-    prom_dict = to_dict(parse(in_file, 'fasta'))
+    prom_dict = to_dict(parse(StringIO(in_file), 'fasta'))
     queries = ''
     for row in hits.itertuples():
         if row.str == '1':
