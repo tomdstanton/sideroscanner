@@ -68,7 +68,7 @@ python setup.py install
 * Scan some gzipped fasta files and export results: \
 ```sideroscanner *.fna.gz -o results.csv -e annotated_sideroscanner.faa```
 * Find IROMPs in an assembly, their genomic location and flanking genes: \
-```sideroscanner assembly.fna -g -f```
+```sideroscanner assembly.fna -l -f```
 * Annotate a protein from NCBI: \
 ```efetch -db protein -id "WP_004151913.1" -format fasta | sideroscanner```
 * Find IROMPs in an NCBI genome assembly and predict Fur binding sites
