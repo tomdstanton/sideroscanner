@@ -53,7 +53,7 @@ SideroScannner: a tool for annotating IROMPs in bacteria
 
     group.add_argument('-o', metavar='-', nargs='?', type=str,
                        const=f'sideroscanner_{datetime.today().strftime("%d%m%y_%H%M")}.csv',
-                       help='''output results.csv instead of STDOUT
+                       help='''output results.csv instead of markdown STDOUT
 [optional: path/to/output/file]
 [default: sideroscanner_DDMMYY_hhmm.csv]
 -----------------------------------------------''')

@@ -75,31 +75,10 @@ python setup.py install
 500bp upstream: \
 ```wget -O - https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/006/765/GCF_000006765.1_ASM676v1/GCF_000006765.1_ASM676v1_genomic.fna.gz | gunzip -c | sideroscanner -b 500 ```
 
-**Example output of the above command (truncated):**
-
-| sample | query            | hit           | description                           | score  | len | kDa   | start   | end     | str | upstream                                        | downstream                                                                                        | fur_start | fur_end | p_value  | fur_box                                            |
-|--------|------------------|---------------|---------------------------------------|--------|-----|-------|---------|---------|-----|-------------------------------------------------|---------------------------------------------------------------------------------------------------|-----------|---------|----------|----------------------------------------------------|
-| PAO1   | NC_002516.2_4939 | CntO          | Pseudopaline receptor                 | 1046.3 | 708 | 79.1  | 5427716 | 5429842 | -1  | -                                               | arginine decarboxylase                                                                            | -         | -       | -        | -                                                  |
-| PAO1   | NC_002516.2_2517 | FoxA          | Ferrioxamine receptor                 | 918    | 820 | 90    | 2782764 | 2785226 | -1  | -                                               | -                                                                                                 | 2785292   | 2785342 | 8.08E-06 | GACAAAAATAATGAAAATAATTTTCAGTGCGTTTCGCTCCGGACGAAAGC |
-| PAO1   | NC_002516.2_157  | PA0151        | TonB-dependent receptor               | 1429.8 | 795 | 86.7  | 171047  | 173434  | 1   | -                                               | -                                                                                                 | 170992    | 171042  | 8.28E-07 | GTGCTCATGACCGCGATTGATTCGCATTAGAAAAGCGACCGACACGAGCA |
-| PAO1   | NC_002516.2_4809 | PhuR          | Heme/hemoglobin receptor              | 1572.2 | 764 | 84.7  | 5289217 | 5291511 | 1   | phuS phuT phuU                                  | -                                                                                                 | 5289111   | 5289161 | 1.44E-05 | CTGAATCCATTTGATAATTATTTGCATTAGCGTTTTTCTGGCAGTACCTT |
-| PAO1   | NC_002516.2_481  | FhuA          | Ferrichrome receptor                  | 798.6  | 802 | 88.2  | 530029  | 532437  | -1  | -                                               | -                                                                                                 | 532442    | 532492  | 4.19E-08 | GGGCTCCTGGATGGAAACGAGTCTCAATGCCTCCTTGCCGGACGAGTCGG |
-| PAO1   | NC_002516.2_1347 | PfuA          | Hydroxamate-type siderophore receptor | 1272.2 | 732 | 80.8  | 1433166 | 1435364 | 1   | -                                               | -                                                                                                 | 1433106   | 1433156 | 2.77E-06 | CATCTTGGTTATTGAGAATCATTGGCATTTGATTGATGGAGGGTTTTTTT |
-| PAO1   | NC_002516.2_1964 | CirA          | DHBS/colicin receptor                 | 490    | 653 | 72.3  | 2097491 | 2099452 | 1   | -                                               | -                                                                                                 | 2097111   | 2097161 | 1.74E-05 | ACCCGCGCCGCCGGGAAGCGTTCGAGCAGGCGCCGGCCGAGGGAGCCCGG |
-| PAO1   | NC_002516.2_4608 | PfuA          | Hydroxamate-type siderophore receptor | 794.9  | 753 | 82.3  | 5053616 | 5055877 | -1  | -                                               | ibeC                                                                                              | 5056024   | 5056074 | 4.42E-06 | AATGATTGCCAATGATATTGATTTGCATTGGACATGTAAAACCGCTAGAG |
-| PAO1   | NC_002516.2_2746 | FepA          | Enterobactin receptor                 | 1232   | 746 | 81    | 3040242 | 3042482 | 1   | vgrG1b                                          | -                                                                                                 | 3040172   | 3040222 | 5.34E-05 | TTACTCTCAAATAACAATCAATATCATTTGTGATCTCTTGCATTTCGCTG |
-
-* Results are printed in markdown format so they can be pasted easily
-into a variety of different programs and it looks nice(ish)!
-* The program iterates over input files but not individual records in the file, 
-e.g. if inputting a file of contigs, it will assume the whole file 
-is a *sample* as opposed to treating each record as an individual *sample*.
-* Fastq files are supported, but this feature doesn't work well.
-
 ```
 usage: sideroscanner <IN.fasta> [options]
 Options:
-  -o [-]          output results.csv instead of STDOUT
+  -o [-]          output results.csv instead of markdown STDOUT
                   [optional: path/to/output/file]
                   [default: sideroscanner_DDMMYY_hhmm.csv]
                   -----------------------------------------------
@@ -141,10 +120,12 @@ Options:
 This has been observed in *P.aeruginosa* PAO1.
 * Gzipped files cannot be piped in because I haven't figured out how to
 decompress STDIN in python. Just use ```gunzip -c | sideroscanner```
+
 **Features in development:**
 * Outputting/appending GFF files.
 * Further optimising multiprocessing with hmmscan.
 * Gzipped stdin.
+* Fastq and read scanning.
 ### Build databases
 By default, SideroScanner comes with just the IROMP HMM library.
 * The hit location command (```-l```) uses [PLSDB](https://ccb-microbe.cs.uni-saarland.de/plsdb/)
@@ -169,8 +150,6 @@ Options:
                         -----------------------------------------------
   -h                    show this help message and exit
 ```
-* There might be some bugs if either the plsdb/mgedb is downloaded without the other
-so it safer to download both.
 ### Build HMM library
 * Adding new HMMs to the library is easy! Just run the following command
 and follow the prompts to enter a protein name, **valid** NCBI accession
