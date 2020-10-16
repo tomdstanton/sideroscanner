@@ -66,12 +66,14 @@ python setup.py install
 ### Annotate
 **Example commands:**
 * Scan some gzipped fasta files and export results: \
-```sideroscanner -i path/to/*.fna.gz -o results.csv -e annotated_sideroscanner.faa```
+```sideroscanner *.fna.gz -o results.csv -e annotated_sideroscanner.faa```
+* Find IROMPs in an assembly, their genomic location and flanking genes: \
+```sideroscanner assembly.fna -g -f```
 * Annotate a protein from NCBI: \
-```efetch -db protein -id "WP_004151913.1" -format fasta | sideroscanner -i -```
-* Feelin' crazy? Scan an NCBI genome assembly, screen the flanking genes and 500 bp upstream for
-Fur binding sites: \
-```wget -O - https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/006/765/GCF_000006765.1_ASM676v1/GCF_000006765.1_ASM676v1_genomic.fna.gz | gunzip -c | sideroscanner -i - -f -b 500 ```
+```efetch -db protein -id "WP_004151913.1" -format fasta | sideroscanner```
+* Find IROMPs in an NCBI genome assembly and predict Fur binding sites
+500bp upstream: \
+```wget -O - https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/006/765/GCF_000006765.1_ASM676v1/GCF_000006765.1_ASM676v1_genomic.fna.gz | gunzip -c | sideroscanner -b 500 ```
 
 **Example output of the above command (truncated):**
 
@@ -88,18 +90,15 @@ Fur binding sites: \
 | PAO1   | NC_002516.2_2746 | FepA          | Enterobactin receptor                 | 1232   | 746 | 81    | 3040242 | 3042482 | 1   | vgrG1b                                          | -                                                                                                 | 3040172   | 3040222 | 5.34E-05 | TTACTCTCAAATAACAATCAATATCATTTGTGATCTCTTGCATTTCGCTG |
 
 * Results are printed in markdown format so they can be pasted easily
-into a variety of different programs and it looks nice(ish)! However
-this can be changed if there is a demand for more pipe-able features.
-* Takes any number of protein or DNA fasta-formatted files, accepts gzipped files too, however it seems
-they cannot be piped currently.
+into a variety of different programs and it looks nice(ish)!
 * The program iterates over input files but not individual records in the file, 
 e.g. if inputting a file of contigs, it will assume the whole file 
 is a *sample* as opposed to treating each record as an individual *sample*.
-* Fastq files are supported, but this feature doesn't work well. Optimisation is planned in future.
+* Fastq files are supported, but this feature doesn't work well.
+
 ```
+usage: sideroscanner <IN.fasta> [options]
 Options:
-  -i [- [- ...]]  path/to/input ['-' for STDIN]
-                  -----------------------------------------------
   -o [-]          output results.csv instead of STDOUT
                   [optional: path/to/output/file]
                   [default: sideroscanner_DDMMYY_hhmm.csv]
@@ -119,7 +118,7 @@ Options:
                   [optional: path/to/export/fasta]
                   [default: filename_sideroscanner.faa]
                   -----------------------------------------------
-  -t int          number of threads [default: max cpus]
+  -t int          number of threads [default: 4]
                   -----------------------------------------------
   --lowqual [-]   'meta' CDS prediction AND single domain filter
                   [optional: path/to/draft/genome]
@@ -137,6 +136,15 @@ Options:
                   -----------------------------------------------
   -h              show this help message and exit
 ```
+**Known bugs:**
+* If the flanking proteins are too long, this can cause blastp to hang.
+This has been observed in *P.aeruginosa* PAO1.
+* Gzipped files cannot be piped in because I haven't figured out how to
+decompress STDIN in python. Just use ```gunzip -c | sideroscanner```
+**Features in development:**
+* Outputting/appending GFF files.
+* Further optimising multiprocessing with hmmscan.
+* Gzipped stdin.
 ### Build databases
 By default, SideroScanner comes with just the IROMP HMM library.
 * The hit location command (```-l```) uses [PLSDB](https://ccb-microbe.cs.uni-saarland.de/plsdb/)
@@ -157,6 +165,8 @@ Options:
                         -----------------------------------------------
   --keep                keep database fasta files
                         -----------------------------------------------
+  --overwrite           overwrite pre-existing databases
+                        -----------------------------------------------
   -h                    show this help message and exit
 ```
 * There might be some bugs if either the plsdb/mgedb is downloaded without the other
@@ -174,22 +184,22 @@ size window.
 * You have the option of overwriting all HMMs or just appending your new proteins.
 ```
 Options:
-  --report [-]    save info about proteins in seed alignment
-                  [optional: path/to/output/file]
-                  [default: seed_alignment_DDMMYY_hhmm.xlsx]
-                  -----------------------------------------------
-  -w int          protein length window [default: 2]
-                  -----------------------------------------------
-  -e str          evalue for blastp [default: 1e-130]
-                  -----------------------------------------------
-  -t int          number of threads [default: max cpus]
-                  -----------------------------------------------
-  --keep          keep seed alignments
-                  -----------------------------------------------
-  --review        print table of reference proteins for inspection
-                  -----------------------------------------------
-  --append        add new protein to reference table
-                  -----------------------------------------------
-  -h              show this help message and exit
+  --report [-]  save info about proteins in seed alignment
+                [optional: path/to/output/file]
+                [default: seed_alignment_DDMMYY_hhmm.xlsx]
+                -----------------------------------------------
+  -w int        protein length window [default: 3]
+                -----------------------------------------------
+  -e str        evalue for blastp [default: 1e-130]
+                -----------------------------------------------
+  -t int        number of threads [default: 4]
+                -----------------------------------------------
+  --keep        keep seed alignments
+                -----------------------------------------------
+  --inspect     print table of reference proteins
+                -----------------------------------------------
+  --append      add new protein to reference table
+                -----------------------------------------------
+  -h            show this help message and exit
 ```
 ![Image](https://github.com/tomdstanton/sideroscanner/blob/master/sideroscanner.png)

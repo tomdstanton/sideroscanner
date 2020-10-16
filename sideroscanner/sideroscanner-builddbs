@@ -50,7 +50,7 @@ SideroScannner: a tool for annotating IROMPs in bacteria
 -----------------------------------------------''')
     group.add_argument('--overwrite', action='store_true',
                        help='''overwrite pre-existing databases
-    -----------------------------------------------''')
+-----------------------------------------------''')
     group.add_argument("-h", action="help", help='''show this help message and exit''')
     return parser.parse_args()
 

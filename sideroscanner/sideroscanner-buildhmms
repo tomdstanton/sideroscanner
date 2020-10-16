@@ -35,7 +35,7 @@ def parse_args():
                                      usage="./sideroscanner-buildhmms",
                                      description='''
 SideroScannner: a tool for annotating IROMPs in bacteria
------------------------------------------------------------------''')
+---------------------------------------------------------------''')
     group = parser.add_argument_group("Options")
     group.add_argument('--report', metavar='-', nargs='?', type=str,
                        const=f'seed_alignment_{datetime.today().strftime("%d%m%y_%H%M")}.xlsx',

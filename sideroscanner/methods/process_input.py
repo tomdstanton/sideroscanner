@@ -7,15 +7,20 @@ from sys import exit, stdin
 from gzip import open as gzopen
 from sideroscanner.tools.orfm import run_orfm
 from sideroscanner.tools.prodigal import run_prodigal
-
+from pathlib import Path
+from select import select
 
 def check_seq(file):
     if file == '-':
+        if not select([stdin], [], [], 0.0)[0]:
+            exit('[!] No arguments passed, usage: sideroscanner <IN.fasta> [options]')
         try:
             seq = stdin.read()
         except UnicodeDecodeError:
             exit("[!] Cannot read STDIN, if gzipped try: file | gunzip -c | sideroscanner")
     else:
+        if not Path(file).exists():
+            return print(f"[!] {file} does not exist, skipping...")
         try:
             with open(file, 'r') as fr:
                 seq = fr.read()
