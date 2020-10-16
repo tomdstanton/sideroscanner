@@ -58,6 +58,6 @@ def flank_screen(in_file, hits, flankpath, cds, threads):
     hit_df = pd.DataFrame([sub.split("#") for sub in hit_list],
                         columns=['query','flanking_genes'])
 
-    hit_df = hit_df.groupby(['query'])['flanking_genes'].apply(lambda x: ' '.join(x.astype(str))).reset_index()
+    hit_df = hit_df.groupby(['query'])['flanking_genes'].apply(lambda x: ''.join(x.astype(str))).reset_index()
     hit_df['flanking_genes'] = hit_df['flanking_genes'].str.strip()
     return hits.merge(hit_df, on='query', how='left')

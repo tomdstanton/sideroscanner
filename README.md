@@ -28,7 +28,7 @@ have a role in mediating **resistance**
 to these compounds.
 
 *How does it work?*
-1. Takes AA or DNA fasta (translates DNA to AA).
+1. Takes AA or DNA fasta file or input stream.
 2. Iteratively filters proteins with conserved IROMP domain architecture.
 3. Annotates them with a curated HMM library.
 
@@ -36,6 +36,7 @@ to these compounds.
 * Screens for **plasmids/MGEs** to determine genomic location of hits.
 * Screens hit flanking genes for additional **virulence factors**.
 * Screens hit promoter regions for **Fur binding sites**.
+* Parameter adjustment for low quality assemblies.
 
 **Please cite:**
 ```
@@ -125,7 +126,7 @@ decompress STDIN in python. Just use ```gunzip -c | sideroscanner```
 * Outputting/appending GFF files.
 * Further optimising multiprocessing with hmmscan.
 * Gzipped stdin.
-* Fastq and read scanning.
+* Full fastq read support.
 ### Build databases
 By default, SideroScanner comes with just the IROMP HMM library.
 * The hit location command (```-l```) uses [PLSDB](https://ccb-microbe.cs.uni-saarland.de/plsdb/)
@@ -133,8 +134,9 @@ and [ICEBerg2.0](https://db-mml.sjtu.edu.cn/ICEberg/),
 however it will work if either one is absent: \
 ```sideroscanner-builddbs -db plsdb mgedb```
 * The flank command (```-f```) uses a concatenated, non-redundant database from
-[Patric-VF](https://www.patricbrc.org/), [Victors](http://www.phidias.us/victors/index.php)
-and [VFDB](http://www.mgc.ac.cn/VFs/main.htm): \
+[Patric-VF](https://www.patricbrc.org/), [Victors](http://www.phidias.us/victors/index.php),
+[VFDB](http://www.mgc.ac.cn/VFs/main.htm) and 'siderophore'-related 
+proteins from [UniProt](https://www.uniprot.org/uniprot/?query=siderophore+AND+taxonomy%3A%22Bacteria+%5B2%5D%22+NOT+receptor+NOT+partial+NOT+fragment&sort=score): \
 ```sideroscanner-builddbs -db flankdb```
 * The Fur binding site command (```-b```) uses a concatenated 
 Fur-box pwm from [CollecTF](http://www.collectf.org/browse/home/) which
