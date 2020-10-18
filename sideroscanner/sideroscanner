@@ -193,14 +193,15 @@ SideroScannner: a tool for annotating IROMPs in bacteria
             continue
 
         # Annotate
-        iromps = [rec.format("fasta") for rec in parse(StringIO(iromps), "fasta")]
-
         def annotation_pool(query):
             return annotate(query, input_type, args.lib, threads)
 
         with Pool(16) as p:
             print("[>] Running hmmscan...   ", end="", flush=True)
-            hits = pd.concat(p.map(annotation_pool, iromps)).reset_index(drop=True)
+            hits = pd.concat(
+                p.map(annotation_pool,
+                [rec.format("fasta") for rec in parse(StringIO(iromps),
+                                                      "fasta")])).reset_index(drop=True)
 
         if hits is None:
             print('[!] No significant hits')
