@@ -105,12 +105,6 @@ SideroScannner: a tool for annotating IROMPs in bacteria
     if args.v is True:
         exit(__version__)
 
-    if args.t > cpu_count():
-        print(f'[!] Number of threads exceeds available CPUs, will use: {cpu_count()}')
-        threads = str(cpu_count())
-    else:
-        threads = str(args.t)
-
     if args.logo is True:
         exit(print_logo())
 
@@ -160,7 +154,12 @@ SideroScannner: a tool for annotating IROMPs in bacteria
     if 'Linux' not in uname()[0]:
         print(f'[!] Warning: SideroScanner has not been tested on {uname()[0]}')
     print(f'[|] {datetime.today().strftime("%Y-%m-%d-%H:%M:%S")}')
-    print(f'[|] Using {threads} threads...')
+    if args.t > cpu_count():
+        print(f'[!] Number of threads exceeds available CPUs, will use: {cpu_count()}')
+        threads = str(cpu_count())
+    else:
+        threads = str(args.t)
+        print(f'[|] Using {threads} threads...')
 
     if args.o is not None:
         out_df = pd.DataFrame()
