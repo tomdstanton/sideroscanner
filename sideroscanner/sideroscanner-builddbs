@@ -8,161 +8,95 @@ __author_email__ = 'T.D.Stanton@sms.ed.ac.uk'
 __description__ = 'A tool for annotating IROMPs in bacteria'
 __license__ = 'gpl-3.0'
 
-import gzip
-import zipfile
+
 from argparse import RawTextHelpFormatter, ArgumentParser
 from datetime import datetime
-from os import remove, uname
+from os import remove, uname, cpu_count
 from os.path import dirname, isfile
 from glob import glob
-from pathlib import Path
 from shutil import get_terminal_size
-from Bio.SeqIO import parse, write
+
 import sideroscanner
-from sideroscanner.methods.fetch import fetch_url
-from sideroscanner.tools.blast import run_makeblastdb
-from sideroscanner.tools.cdhit import run_cdhit
+from sideroscanner.methods.build_flankdb import get_flankdb
+from sideroscanner.methods.build_mgedb import get_mgedb
+from sideroscanner.methods.build_plsdb import get_plsdb
 
-dbpath = f'{dirname(sideroscanner.__file__)}/data'
-mgepath = f'{dbpath}/mgedb'
-plspath = f'{dbpath}/plsdb'
-flankpath = f'{dbpath}/flankdb'
-furpath =  f'{dbpath}/furdb'
-iromppath = f'{dbpath}/irompdb'
-blastdb = f'{iromppath}/irompdb'
 
-def parse_args():
+if __name__ == "__main__":
+
     parser = ArgumentParser(add_help=False,
                                      formatter_class=RawTextHelpFormatter,
-                                     usage="./sideroscanner-builddbs",
+                                     usage="sideroscanner-builddbs plsdb/mgedb/flankdb/all [options]",
                                      description='''
 SideroScannner: a tool for annotating IROMPs in bacteria
 -----------------------------------------------------------------------''')
+    parser.add_argument('db', nargs='+', #help=SUPPRESS,
+                 choices=['plsdb', 'mgedb', 'flankdb', 'all'],
+                 default=['all'])
+
     group = parser.add_argument_group("Options")
-    group.add_argument('-db', nargs='+',
-                       choices=['plsdb', 'mgedb', 'flankdb'],
-                       default=['plsdb', 'mgedb', 'flankdb'],
-                       metavar='plsdb/mgedb/flankdb',
-                       help='''build specific database [default: all]
------------------------------------------------''')
     group.add_argument('--keep', action='store_true',
                        help='''keep database fasta files
 -----------------------------------------------''')
-    group.add_argument('--overwrite', action='store_true',
+    group.add_argument('-t', metavar='int', type=int, default=cpu_count(),
+                       help=f'''number of threads [default: {cpu_count()}]
+-----------------------------------------------''')
+    group.add_argument('--overwrite', action='store_true', default=False,
                        help='''overwrite pre-existing databases
 -----------------------------------------------''')
     group.add_argument("-h", action="help", help='''show this help message and exit''')
-    return parser.parse_args()
-
-
-def get_plsdb():
-    Path(plspath).mkdir(parents=True, exist_ok=True)
-    fetch_url('https://ccb-microbe.cs.uni-saarland.de/plsdb/plasmids/download/?zip', None, plspath + '/plsdb')
-    with zipfile.ZipFile(plspath+'/plsdb', "r") as zip_ref:
-        zip_ref.extractall(plspath + '/')
-    for f in ['/plsdb','/plsdb.tsv','/plsdb_changes.tsv','/plsdb.msh','/plsdb.abr','/plsdb.sim','/README.md']:
-        remove(plspath + f)
-    return
-
-def get_mgedb():
-    Path(mgepath).mkdir(parents=True, exist_ok=True)
-    ice = fetch_url('https://db-mml.sjtu.edu.cn/ICEberg2/download/ICE_seq_all.fas', None, mgepath + '/ice.fna')
-    t4ss = fetch_url('https://db-mml.sjtu.edu.cn/ICEberg2/download/T4SS-type_ICE_seq_all.fas', None, mgepath + '/t4ss.fna')
-    aice = fetch_url('https://db-mml.sjtu.edu.cn/ICEberg2/download/AICE_seq_all.fas', None, mgepath + '/aice.fna')
-    ime = fetch_url('https://db-mml.sjtu.edu.cn/ICEberg2/download/IME_seq_all.fas', None, mgepath + '/ime.fna')
-    cime = fetch_url('https://db-mml.sjtu.edu.cn/ICEberg2/download/CIME_seq_all.fas', None, mgepath + '/cime.fna')
-    filenames = [ice, t4ss, aice, ime, cime]
-    with open(mgepath + '/mgedb', 'wb') as mge_file:
-        for fname in filenames:
-            with open(fname, 'rb') as infile:
-                for line in infile:
-                    mge_file.write(line)
-            remove(fname)
-    with open(mgepath + '/mgedb_clean', 'a') as f:
-        record_ids = list()
-        for r in parse(mgepath + '/mgedb', 'fasta'):
-            if len(r.id) > 50:
-                r.id = r.id[0:49]
-            if r.id not in record_ids:
-                record_ids.append(r.id)
-                write(r, f, 'fasta')
-    remove(mgepath + '/mgedb')
-    return mgepath + '/mgedb_clean'
-
-def get_flankdb():
-    Path(flankpath).mkdir(parents=True, exist_ok=True)
-    patric = fetch_url('ftp://ftp.patricbrc.org/specialty_genes/referenceDBs/PATRIC_VF.faa', None, flankpath + '/patric.faa')
-    victors = fetch_url('http://www.phidias.us/victors/downloads/gen_downloads_protein.php', None, flankpath + '/victors.faa')
-    vfdb = fetch_url('http://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas.gz', None, flankpath + '/vfdb.faa.gz')
-    params = {'query': 'siderophore AND '
-                       'taxonomy:"Bacteria [2]" AND '
-                       'NOT receptor NOT partial NOT fragment', 'format': 'fasta'}
-    bgcs = fetch_url('http://www.uniprot.org/uniprot/', params, flankpath + '/bgcs.faa')
-
-    filenames = [patric, victors, vfdb, bgcs]
-    with open(flankpath + '/flankdb', 'wb') as flank_file:
-        for fname in filenames:
-            if fname.endswith('.gz'):
-                with gzip.open(fname) as infile:
-                    for line in infile:
-                        flank_file.write(line)
-            else:
-                with open(fname, 'rb') as infile:
-                    for line in infile:
-                        flank_file.write(line)
-            remove(fname)
-    return flankpath + '/flankdb'
-
-def main():
-    if len(parse_args().db) == 0:
-        exit('[!] -db flag requires either [plsdb/mgedb/flankdb]')
+    args = parser.parse_args()
 
     print(f'[|] \033[4m{__title__} {__version__}\033[0m')
     print(f'[|] Your system is {uname()[0]}')
     if 'Linux' not in uname()[0]:
         print(f'[!] Warning: SideroScanner has not been tested on {uname()[0]}')
     print(f'[|] {datetime.today().strftime("%Y-%m-%d-%H:%M:%S")}')
+    if args.t > cpu_count():
+        print(f'[!] Number of threads exceeds available CPUs, will use: {cpu_count()}')
+        threads = str(cpu_count())
+    else:
+        threads = str(args.t)
+        print(f'[|] Using {threads} threads...')
 
-    db_list = []
-    for i in parse_args().db:
-        if [n for n in glob(f'{dbpath}/{i}/{i}.*sq') if isfile(n)]:
-            answer = None
-            while answer not in ("y", "n"):
-                answer = input(f'[!] {i} already exists, overwrite? [y/n]: ')
-                if answer == "y":
-                    db_list.append(i)
-                elif answer == "n":
-                    continue
-                else:
-                    print("[!] Please enter [y] or [n]: ")
-        else:
-            db_list.append(i)
+    dbpath = f'{dirname(sideroscanner.__file__)}/data'
+
+    db_choices = args.db
+    if 'all' in db_choices:
+        db_choices = ['plsdb', 'mgedb', 'flankdb']
+
+    if not args.overwrite:
+        db_list = []
+        for db in db_choices:
+            if [n for n in glob(f'{dbpath}/{db}/{db}.*sq') if isfile(n)]:
+                answer = None
+                while answer not in ("y", "n"):
+                    answer = input(f'[!] {db} already exists, overwrite? [y/n]: ')
+                    if answer == "y":
+                        db_list.append(db)
+                    elif answer == "n":
+                        continue
+                    else:
+                        print("[!] Please enter [y] or [n]: ")
+            else:
+                db_list.append(db)
+
+    else:
+        db_list = db_choices
 
     if not db_list:
-        print('-' * int(get_terminal_size()[0]))
         exit('[!] All database files exist, exiting')
 
-    if 'plsdb' in db_list:
-        print('-' * int(get_terminal_size()[0]))
-        print("[-] Preparing plasmid database")
-        get_plsdb()
 
-    if 'mgedb' in db_list:
+    for i in db_list:
         print('-' * int(get_terminal_size()[0]))
-        print("[-] Preparing mobile genetic element database")
-        mgedb = get_mgedb()
-        run_makeblastdb(mgedb, 'nucl', mgepath+'/mgedb')
-        if parse_args().keep is False:
-            remove(mgedb)
 
-    if 'flankdb' in db_list:
-        print('-' * int(get_terminal_size()[0]))
-        print("[-] Preparing flanking virulence gene database")
-        flankdb = get_flankdb()
-        flankdb = run_cdhit(flankdb, 1)
-        run_makeblastdb(flankdb, 'prot', flankpath+'/flankdb')
-        if parse_args().keep is False:
-            remove(flankdb)
+        if i == 'flankdb':
+            get_flankdb(f'{dbpath}/{i}', threads)
+        if i == 'mgedb':
+            get_mgedb(f'{dbpath}/{i}')
+        if i == 'plsdb':
+            get_plsdb(f'{dbpath}/{i}')
 
-if __name__ == "__main__":
-    main()
+        if args.keep is False:
+            remove(f'{dbpath}/{i}/{i}')

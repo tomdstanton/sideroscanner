@@ -22,7 +22,7 @@ def plasmid_mge_screen(in_file, plspath, mgepath, hits, percid, threads):
     mges = []
     for q in run_blastn(in_file, mgepath+'/mgedb', 0, percid, threads):
         for h in q.hits:
-            mges.append(f'{h.query_id}#{h.id.split("|")[2]}#'
+            mges.append(f'{h.query_id}#{h.id}#'
                         f'{str(h.hsps[0].query_range[0])}-'
                         f'{str(h.hsps[0].query_range[1])}')
     print("%i MGE(s) found"%len(mges))

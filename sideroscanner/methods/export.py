@@ -13,6 +13,9 @@ def export_proteins(in_file, out_file, name, hits):
         r.description = f'{row.description} {row.hit}'
         to_write.append(r)
     if out_file == '':
-        out_file = f'{name}_sideroscanner.faa'
+        if name == '-':
+            out_file = 'stdin_sideroscanner.faa'
+        else:
+            out_file = f'{name}_sideroscanner.faa'
     write(to_write, out_file, "fasta")
     print(f'[-] Proteins written to: {out_file}')

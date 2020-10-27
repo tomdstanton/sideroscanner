@@ -4,7 +4,7 @@
 import requests
 from ftplib import FTP
 from tqdm import tqdm
-from sys import exit
+
 
 def fetch_url(url, params, outfile):
     print(f'[>] Downloading from {url}...')
