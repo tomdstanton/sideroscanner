@@ -32,8 +32,8 @@ def fetch_url(url, params, outfile):
                     t.update(len(data))
                     f.write(data)
             t.close()
-            if total_size != 0 and t.n != total_size:
-                print("\n[!] ERROR, something went wrong")
+            # if total_size != 0 and t.n != total_size:
+            #     print("\n[!] ERROR, something went wrong")
             r.raise_for_status()
         except requests.exceptions.HTTPError as err:
             raise SystemExit(err)
