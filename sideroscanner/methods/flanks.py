@@ -35,7 +35,7 @@ def flank_screen(in_file, hits, flankpath, cds, threads):
 
     hit_list = []
     # For each IROMP flanking protein
-    for q in run_blastp(queries, flankpath+'/flankdb', '1e-130', threads):
+    for q in run_blastp(queries, flankpath+'/flankdb', '1e-130', '5', threads):
         # If the protein has a hit
         if len(q.hits) > 0:
             out = q.hsps[0].hit_description

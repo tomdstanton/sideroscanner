@@ -3,7 +3,7 @@
 
 __author__ = 'Tom Stanton'
 __title__ = 'SideroScanner'
-__version__ = '0.0.2'
+__version__ = '0.0.3'
 __author_email__ = 'T.D.Stanton@sms.ed.ac.uk'
 __description__ = 'A tool for annotating IROMPs in bacteria'
 __license__ = 'gpl-3.0'
@@ -64,7 +64,7 @@ SideroScannner: a tool for annotating IROMPs in bacteria
                        help='''add new protein to reference table
 -----------------------------------------------''')
     group.add_argument("-h", action="help", help='''show this help message and exit''')
-    args = parser.args
+    args = parser.parse_args()
 
 
     if not path.isdir(iromppath):
@@ -75,7 +75,7 @@ SideroScannner: a tool for annotating IROMPs in bacteria
 
     seed_df = pd.read_csv(iromppath + '/iromps.csv')
     if args.inspect is True:
-        exit(seed_df.to_markdown(showindex=False))
+        exit(seed_df.to_markdown(index=False))
 
     if args.append is True:
         name = input("[-] Enter protein name (e.g. Fiu): ").strip()
@@ -179,11 +179,16 @@ SideroScannner: a tool for annotating IROMPs in bacteria
         if hit_acc is None:
             print(f'[!] No hits found, review entry')
             continue
-        hit_df = db_df[db_df['accession'].isin(hit_acc)]
+
+        hit_df = pd.DataFrame([sub.split("$") for sub in hit_acc],
+                        columns=['accession', 'length', 'evalue'])
+
+        hit_df = hit_df.merge(db_df, on='accession', how='left')
         hit_df.to_excel(writer, sheet_name=row.protein, index=False)
+
         hits = ''
         for h in hit_acc:
-            hits += db_dict[h].format("fasta")
+            hits += db_dict[h.split('$')[0]].format("fasta")
         d[row.protein] = str(hit_acc)
         alignment = run_muscle(hits, f'{iromppath}/{row.protein}_aligned.faa')
         trimmed = run_trimal(alignment)
