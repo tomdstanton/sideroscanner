@@ -45,8 +45,8 @@ SideroScannner: a tool for annotating IROMPs in bacteria
 [optional: path/to/output/file]
 [default: seed_alignment_DDMMYY_hhmm.xlsx]
 -----------------------------------------------''')
-    group.add_argument('-w', metavar='int', type=int, default=3,
-                       help='''protein length window [default: 3]
+    group.add_argument('-w', metavar='int', type=int, default=2,
+                       help='''protein length window [default: 2]
 -----------------------------------------------''')
     group.add_argument('-e', metavar='str', type=str, default='1e-130',
                        help='''evalue for blastp [default: 1e-130]
