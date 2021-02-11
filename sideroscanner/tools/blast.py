@@ -6,6 +6,7 @@ from subprocess import Popen, PIPE, DEVNULL, run
 from io import StringIO
 from sys import exit
 from shutil import which
+from os import path
 
 
 def run_blastn(query, blastn_db, cov, percid, threads):
@@ -37,13 +38,13 @@ def run_blastp(query, blastp_db, evalue, max_seqs, threads):
     cmd = ['blastp',
            '-db', blastp_db,
            '-outfmt', '5',
-           '-task', 'blastp-fast',
+           #'-task', 'blastp-fast',
            '-evalue', evalue,
            # '-max_hsps', '1',
            '-max_target_seqs', max_seqs,
            # '-soft_masking', 'true',
-           '-word_size', '6',
-           '-threshold', '21',
+           #'-word_size', '20',
+           #'-threshold', '21',
            '-num_threads', threads,
            '-query', '-']
     child = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
@@ -61,4 +62,5 @@ def run_makeblastdb(infile, molecule, name):
            '-dbtype', molecule, '-out', name]
     run(cmd, stdout=DEVNULL)
     print('done!')
+
     return name

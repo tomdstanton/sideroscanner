@@ -3,7 +3,7 @@
 
 __author__ = 'Tom Stanton'
 __title__ = 'SideroScanner'
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 __author_email__ = 'T.D.Stanton@sms.ed.ac.uk'
 __description__ = 'A tool for annotating IROMPs in bacteria'
 __license__ = 'gpl-3.0'

@@ -3,7 +3,7 @@
 
 __author__ = 'Tom Stanton'
 __title__ = 'SideroScanner'
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 __author_email__ = 'T.D.Stanton@sms.ed.ac.uk'
 __description__ = 'A tool for annotating IROMPs in bacteria'
 __license__ = 'gpl-3.0'
@@ -11,9 +11,11 @@ __license__ = 'gpl-3.0'
 from argparse import RawTextHelpFormatter, ArgumentParser
 from datetime import datetime
 from os import cpu_count, remove, uname, path, stat
-from shutil import get_terminal_size
+from shutil import get_terminal_size, rmtree
 import pandas as pd
 from Bio.SeqIO import to_dict, parse
+from pathlib import Path
+from tempfile import TemporaryFile
 import sideroscanner
 from sideroscanner.methods.efetch import efetch
 from sideroscanner.methods.build_irompdb import get_fastadb
@@ -48,8 +50,11 @@ SideroScannner: a tool for annotating IROMPs in bacteria
     group.add_argument('-w', metavar='int', type=int, default=2,
                        help='''protein length window [default: 2]
 -----------------------------------------------''')
-    group.add_argument('-e', metavar='str', type=str, default='1e-130',
-                       help='''evalue for blastp [default: 1e-130]
+    group.add_argument('-e', metavar='str', type=str, default='1e-200',
+                       help='''evalue for blastp [default: 1e-200]
+-----------------------------------------------''')
+    group.add_argument('-p', metavar='int', type=int, default=100,
+                       help='''percent to cluster seeds [default: 100]
 -----------------------------------------------''')
     group.add_argument('-t', metavar='int', type=int, default=cpu_count(),
                        help=f'''number of threads [default: {cpu_count()}]
@@ -150,22 +155,23 @@ SideroScannner: a tool for annotating IROMPs in bacteria
 
     print('-' * int(get_terminal_size()[0]))
 
-    proteins, fastadb = f'{iromppath}/iromps.faa', f'{iromppath}/iromps_nr.faa'
-    if not path.isfile(blastdb+'.psq') or stat(blastdb+'.psq').st_size < 270000000: # loose size, may need adjusting
-        if not path.isfile(fastadb) or stat(fastadb).st_size < 320000000: # loose size, may need adjusting
-            if not path.isfile(proteins) or stat(proteins).st_size < 350000000: # loose size, may need adjusting
-                fastadb = run_cdhit(get_fastadb(iromppath), 1, threads)
-            else: fastadb = run_cdhit(proteins, 1, threads)
-        run_makeblastdb(fastadb, 'prot', blastdb)
+    proteins = f'{iromppath}/iromps.faa'
+    if not path.isfile(blastdb+'.psq') or stat(blastdb+'.psq').st_size < 310000000: # loose size, may need adjusting
+        if not path.isfile(proteins) or stat(proteins).st_size < 366000000: # loose size, may need adjusting
+            proteins = get_fastadb(iromppath)
+        run_makeblastdb(proteins, 'prot', blastdb)
 
     total_seeds = len(seed_df.index)
     if append is True:
         total_seeds = total_seeds - lib.count('HMMER3/f')
 
-    db_df = make_db_df(fastadb)
-    db_dict = to_dict(parse(fastadb, 'fasta'))
+    db_df = make_db_df(proteins)
+    db_dict = to_dict(parse(proteins, 'fasta'))
     writer = pd.ExcelWriter(f'{args.report}', engine='xlsxwriter')
     c, d = 0, {}
+
+    alignpath = f'{iromppath}/alignments'
+    Path(alignpath).mkdir(parents=True, exist_ok=True)
 
     for row in seed_df.itertuples():
         if append is True:
@@ -175,34 +181,41 @@ SideroScannner: a tool for annotating IROMPs in bacteria
         print('-' * int(get_terminal_size()[0]))
         c += 1
         print(f'[-] Building HMM {c}/{total_seeds} for: {row.protein} ({row.acc})')
+
         hit_acc = seed_blast(efetch(row.acc), blastdb, args.e, args.w, threads)
+
         if hit_acc is None:
             print(f'[!] No hits found, review entry')
             continue
 
+        d[row.protein] = str(hit_acc)
+
         hit_df = pd.DataFrame([sub.split("$") for sub in hit_acc],
-                        columns=['accession', 'length', 'evalue'])
+                        columns=['accession', 'length', 'id'])
 
         hit_df = hit_df.merge(db_df, on='accession', how='left')
-        hit_df.to_excel(writer, sheet_name=row.protein, index=False)
 
         hits = ''
         for h in hit_acc:
             hits += db_dict[h.split('$')[0]].format("fasta")
-        d[row.protein] = str(hit_acc)
-        alignment = run_muscle(hits, f'{iromppath}/{row.protein}_aligned.faa')
+        clustered_hits = run_cdhit(hits, args.p)
+
+        cl_acc = [line.split(' ')[0].replace('>', '') for line in clustered_hits.split('\n') if line.startswith('>')]
+        hit_df = hit_df[hit_df['accession'].isin(cl_acc)]
+        hit_df.to_excel(writer, sheet_name=row.protein, index=False)
+
+        alignment = run_muscle(clustered_hits, f'{alignpath}/{row.protein}_aligned.faa')
         trimmed = run_trimal(alignment)
-        if args.keep is False:
-            remove(alignment)
-        else:
-            print(f'[-] Seed alignment saved to: {alignment}')
         hmm = run_hmmbuild(trimmed, row.protein, f'{iromppath}/{row.protein}.hmm', threads)
+
         with open(hmm, 'r') as file, open(lib, "a+") as f:
             t1 = file.readlines()
             t1.insert(2, 'ACC   ' + row.acc + '\n')
             t1.insert(3, 'DESC  ' + row.desc + '\n')
             f.writelines(t1)
+
         print(f'added {row.protein} to HMM library')
+
         remove(hmm)
 
     print('-' * int(get_terminal_size()[0]))
@@ -217,6 +230,12 @@ SideroScannner: a tool for annotating IROMPs in bacteria
         print(f'[!] {", ".join(overlap[0])} share proteins in their seed alignments, review entries')
         print('-' * int(get_terminal_size()[0]))
     print(f'[-] HMMs written to: {iromppath}/iromps.hmm')
+
+    if args.keep is False:
+        rmtree(alignpath)
+    else:
+        print(f'[-] Seed alignments written to: {alignpath}')
+
     if args.report is not None:
         writer.save()
         print(f'[-] Info written to: {args.report}')

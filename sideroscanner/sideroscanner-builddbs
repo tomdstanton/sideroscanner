@@ -3,7 +3,7 @@
 
 __author__ = 'Tom Stanton'
 __title__ = 'SideroScanner'
-__version__ = '0.0.3'
+__version__ = '0.0.4'
 __author_email__ = 'T.D.Stanton@sms.ed.ac.uk'
 __description__ = 'A tool for annotating IROMPs in bacteria'
 __license__ = 'gpl-3.0'
@@ -11,7 +11,7 @@ __license__ = 'gpl-3.0'
 
 from argparse import RawTextHelpFormatter, ArgumentParser, SUPPRESS
 from datetime import datetime
-from os import remove, uname, cpu_count
+from os import remove, uname
 from os.path import dirname, isfile
 from glob import glob
 from shutil import get_terminal_size
@@ -21,25 +21,21 @@ from sideroscanner.methods.build_flankdb import get_flankdb
 from sideroscanner.methods.build_mgedb import get_mgedb
 from sideroscanner.methods.build_plsdb import get_plsdb
 
-
 if __name__ == "__main__":
 
     parser = ArgumentParser(add_help=False,
-                                     formatter_class=RawTextHelpFormatter,
-                                     usage="sideroscanner-builddbs plsdb/mgedb/flankdb/all [options]",
-                                     description='''
+                            formatter_class=RawTextHelpFormatter,
+                            usage="sideroscanner-builddbs plsdb/mgedb/flankdb/all [options]",
+                            description='''
 SideroScannner: a tool for annotating IROMPs in bacteria
 -----------------------------------------------------------------------''')
     parser.add_argument('db', nargs='+', help=SUPPRESS,
-                 choices=['plsdb', 'mgedb', 'flankdb', 'all'],
-                 default=['all'])
+                        choices=['plsdb', 'mgedb', 'flankdb', 'all'],
+                        default=['all'])
 
     group = parser.add_argument_group('Options')
     group.add_argument('--keep', action='store_true',
                        help='''keep database fasta files
------------------------------------------------''')
-    group.add_argument('-t', metavar='int', type=int, default=cpu_count(),
-                       help=f'''number of threads [default: {cpu_count()}]
 -----------------------------------------------''')
     group.add_argument('--overwrite', action='store_true', default=False,
                        help='''overwrite pre-existing databases
@@ -52,13 +48,6 @@ SideroScannner: a tool for annotating IROMPs in bacteria
     if 'Linux' not in uname()[0]:
         print(f'[!] Warning: SideroScanner has not been tested on {uname()[0]}')
     print(f'[|] {datetime.today().strftime("%Y-%m-%d-%H:%M:%S")}')
-    if args.t > cpu_count():
-        print(f'[!] Number of threads exceeds available CPUs, will use: {cpu_count()}')
-        threads = str(cpu_count())
-    else:
-        threads = str(args.t)
-        print(f'[|] Using {threads} threads...')
-
     dbpath = f'{dirname(sideroscanner.__file__)}/data'
 
     db_choices = args.db
@@ -87,12 +76,11 @@ SideroScannner: a tool for annotating IROMPs in bacteria
     if not db_list:
         exit('[!] All database files exist, exiting')
 
-
     for i in db_list:
         print('-' * int(get_terminal_size()[0]))
 
         if i == 'flankdb':
-            get_flankdb(f'{dbpath}/{i}', threads)
+            get_flankdb(f'{dbpath}/{i}')
         if i == 'mgedb':
             get_mgedb(f'{dbpath}/{i}')
         if i == 'plsdb':

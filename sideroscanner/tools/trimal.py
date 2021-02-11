@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-
 from subprocess import Popen, PIPE
 from shutil import which
 from sys import exit

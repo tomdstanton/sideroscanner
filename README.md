@@ -116,7 +116,11 @@ Options:
                   -----------------------------------------------
   -h              show this help message and exit
 ```
-**Known bugs:**
+**Known issues/bugs:**
+* SideroScanner can get confused between the 
+  highly similar enterobactin/salmochelin receptors FepA, PfeA and IroN.
+  It's worth checking out the flanking proteins with ```-f``` to determine
+  what  they really are.
 * If the flanking proteins are too long, this can cause blastp to hang.
 This has been observed in *P.aeruginosa* PAO1.
 * Gzipped files cannot be piped in because I haven't figured out how to
@@ -124,9 +128,8 @@ decompress STDIN in python. Just use ```gunzip -c | sideroscanner```
 
 **Features in development:**
 * Outputting/appending GFF files.
-* Further optimising multiprocessing with hmmscan.
+* Further optimising HMM construction.
 * Gzipped stdin.
-* Full fastq read support.
 ### Build databases
 By default, SideroScanner comes with just the IROMP HMM library.
 * The hit location command (```-l```) uses [PLSDB](https://ccb-microbe.cs.uni-saarland.de/plsdb/)
