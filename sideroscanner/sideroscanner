@@ -213,19 +213,19 @@ SideroScannner: a tool for annotating IROMPs in bacteria
             print(f'Annotated {len(hits.index)} proteins')
 
         if args.f is not None:
-            if input_type is not 'genome':
+            if input_type != 'genome':
                 print(f'[!] Cannot screen flanking CDS in {input_type} input file')
             else:
                 hits = flank_screen(proteins, hits, flankpath, args.f, threads)
 
         if args.l is not None:
-            if input_type is not 'genome':
+            if input_type != 'genome':
                 print(f'[!] Cannot screen plasmids/MGEs in {input_type} input file')
             else:
                 hits = plasmid_mge_screen(seq, plspath, mgepath, hits, args.l, threads)
 
         if args.b is not None:
-            if input_type is not 'genome':
+            if input_type != 'genome':
                 print(f'[!] Cannot screen Fur binding sites in {input_type} input file')
             else:
                 hits = tfbs_screen(seq, furpath, hits, args.b)
