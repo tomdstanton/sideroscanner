@@ -4,7 +4,7 @@ _By Tom Stanton_ \
 Schneiders Lab - University of Edinburgh
 
 Issues/queries/advice?
-[email me!](tomdstanton@gmail.com)
+[email me!](mailto:s1895738@ed.ac.uk?subject=[SideroScanner])
 
 [![alt text][1.1]][1]
 [![alt text][6.1]][6]
