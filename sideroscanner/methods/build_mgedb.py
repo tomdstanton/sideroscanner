@@ -17,7 +17,8 @@ def get_mgedb(mgepath):
 
     for i in range(1, 15):
         file = fetch_url(f'https://raw.githubusercontent.com/katholt/'
-                         f'Kleborate/master/kleborate/ICEKp_references/ICEKp{i}.embl',
+                         f'Kleborate/master/kleborate/data/ICEKp_references'
+                         f'/ICEKp{i}.embl',
                          None,
                          f'{mgepath}/icekp{i}')
 
