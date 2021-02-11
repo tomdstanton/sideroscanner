@@ -4,7 +4,7 @@ _By Tom Stanton_ \
 Schneiders Lab - University of Edinburgh
 
 Issues/queries/advice?
-[email me!](T.D.Stanton@sms.ed.ac.uk)
+[email me!](tomdstanton@gmail.com)
 
 [![alt text][1.1]][1]
 [![alt text][6.1]][6]
