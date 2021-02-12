@@ -40,14 +40,22 @@ def check_seq(file):
         return print(f"[!] {file} is not a fasta file, skipping...")
 
 
-def proteins_from_seq(seq, qual_arg):
+def proteins_from_seq(seq, qual_arg, mol_arg):
     proteins = ''
     if ">" in seq[0]:
         lowqual = False
+        if mol_arg == 'gene':
+            input_type = 'gene'
+            print(f'[-] User specified {input_type} input')
+            proteins = run_orfm(seq)
+
         # Check if protein
-        if "E" in '\n'.join(seq.split('\n')[1:])[0:99]:
+        if "E" in '\n'.join(seq.split('\n')[1:])[0:99] or mol_arg == 'protein':
             input_type = 'protein'
-            print(f'[?] Guessing {input_type} input, ', end="", flush=True)
+            if mol_arg == 'protein':
+                print(f'[-] User specified {input_type} input, ', end="", flush=True)
+            else:
+                print(f'[?] Guessing {input_type} input, ', end="", flush=True)
             proteins = seq.replace('*', '')
 
         # Assuming DNA
@@ -57,17 +65,25 @@ def proteins_from_seq(seq, qual_arg):
                     lowqual = True
 
             length = [len(r.seq) for r in parse(StringIO(seq), 'fasta')]
-            if (sum(length) / len(length)) > 2000 and len(seq) >= 531000:
+            genome_calc = (sum(length) / len(length)) > 1000 and len(seq) >= 531000
+
+            if genome_calc is True or mol_arg == 'genome':
                 input_type = 'genome'
-                print(f'[?] Guessing {input_type} input')
+                if mol_arg == 'genome':
+                    print(f'[-] User specified {input_type} input')
+                else:
+                    print(f'[?] Guessing {input_type} input')
+
                 if len([g < 10000 for g in length]) > 50 or len(length) > 1000:
                     lowqual = True
 
                 proteins = run_prodigal(seq, lowqual).replace('*', '')
-                if proteins.count('>') > 7500:
+
+                if proteins.count('>') > 7500 and lowqual is False:
                     print('\n[!] Too many CDS, switching to low quality mode')
                     lowqual = True
                     proteins = run_prodigal(seq, lowqual).replace('*', '')
+
             else:
                 input_type = 'gene'
                 print(f'[?] Guessing {input_type} input')

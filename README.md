@@ -46,11 +46,11 @@ https://github.com/tomdstanton/sideroscanner
 ```
 ### Dependencies
 ```
-python >=3.7.6
+python >=3.8
 meme >=5.0.5 (older meme versions have a different output and will break!)
 prodigal >=2.6.3
 hmmer >=3.3
-blast >=2.9.0
+blast ~=2.9.0
 trimal >=1.4.1
 orfm >=0.7.1
 muscle ~=3.8.1551
@@ -77,7 +77,7 @@ python setup.py install
 ```wget -O - https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/006/765/GCF_000006765.1_ASM676v1/GCF_000006765.1_ASM676v1_genomic.fna.gz | gunzip -c | sideroscanner -b 500 ```
 
 ```
-usage: sideroscanner <IN.fasta> [options]
+usage: sideroscanner [options] <IN.fasta>
 Options:
   -o [-]          output results.csv instead of markdown STDOUT
                   [optional: path/to/output/file]
@@ -98,7 +98,7 @@ Options:
                   [optional: path/to/export/fasta]
                   [default: filename_sideroscanner.faa]
                   -----------------------------------------------
-  -t int          number of threads [default: 4]
+  -t int          number of threads [default: all]
                   -----------------------------------------------
   --lowqual [-]   'meta' CDS prediction AND single domain filter
                   [optional: path/to/draft/genome]
@@ -107,6 +107,9 @@ Options:
   --nofilter [-]  turn off domain filter
                   [optional: path/to/input/fasta]
                   [default: all inputs]
+                  -----------------------------------------------
+  --molecule      force molecule type: genome / gene / protein
+                  [default: guess molecule type]
                   -----------------------------------------------
   --lib hmm       path/to/custom/HMM/library.hmm
                   -----------------------------------------------
@@ -117,6 +120,8 @@ Options:
   -h              show this help message and exit
 ```
 **Known issues/bugs:**
+* Running makeblastdb in blast v2.10 using ```sideroscanner-builddbs```
+  can crash because of the insane amount of memory it tries to use.
 * SideroScanner can get confused between the 
   highly similar enterobactin/salmochelin receptors FepA, PfeA and IroN.
   It's worth checking out the flanking proteins with ```-f``` to determine
