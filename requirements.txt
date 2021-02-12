@@ -4,3 +4,4 @@ pandas>=1.0.4
 sideroscanner~=0.0.5
 setuptools~=49.6.0
 tabulate
+python>=3.8
