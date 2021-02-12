@@ -77,7 +77,7 @@ python setup.py install
 ```wget -O - https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/006/765/GCF_000006765.1_ASM676v1/GCF_000006765.1_ASM676v1_genomic.fna.gz | gunzip -c | sideroscanner -b 500 ```
 
 ```
-usage: sideroscanner [options] <IN.fasta>
+usage: sideroscanner <IN.fasta> [options]
 Options:
   -o [-]          output results.csv instead of markdown STDOUT
                   [optional: path/to/output/file]
