@@ -3,7 +3,7 @@
 
 __author__ = 'Tom Stanton'
 __title__ = 'SideroScanner'
-__version__ = '0.0.4'
+__version__ = '0.0.5'
 __author_email__ = 'T.D.Stanton@sms.ed.ac.uk'
 __description__ = 'A tool for annotating IROMPs in bacteria'
 __license__ = 'gpl-3.0'
@@ -42,12 +42,10 @@ if __name__ == "__main__":
 
     parser = ArgumentParser(add_help=False,
                             formatter_class=RawTextHelpFormatter,
-                            usage="sideroscanner <IN.fasta> [options]",
+                            usage="sideroscanner [options] <IN.fasta>",
                             description='''
 SideroScannner: a tool for annotating IROMPs in bacteria
 -----------------------------------------------------------------''')
-
-    parser.add_argument('input', nargs='*', default=['-'], help=SUPPRESS)
 
     group = parser.add_argument_group("Options")
 
@@ -78,7 +76,7 @@ SideroScannner: a tool for annotating IROMPs in bacteria
 [default: filename_sideroscanner.faa]
 -----------------------------------------------''')
     group.add_argument('-t', metavar='int', type=int, default=cpu_count(),
-                       help=f'''number of threads [default: {cpu_count()}]
+                       help=f'''number of threads [default: all]
 -----------------------------------------------''')
     group.add_argument('--lowqual', metavar='-', nargs='?', type=str, const='',
                        help=''''meta' CDS prediction AND single domain filter
@@ -90,9 +88,11 @@ SideroScannner: a tool for annotating IROMPs in bacteria
 [optional: path/to/input/fasta]
 [default: all inputs]
 -----------------------------------------------''')
-#     group.add_argument('--molecule', choices=['genome', 'gene', 'protein'], const='',
-#                        help='''force molecule type
-# -----------------------------------------------''')
+    group.add_argument('--molecule', metavar='',
+                       choices=['genome', 'gene', 'protein'], type=str,
+                       help='''force molecule type: genome / gene / protein
+[default: guess molecule type]
+-----------------------------------------------''')
     group.add_argument('--lib', metavar='hmm', type=str, default=lib,
                        help='''path/to/custom/HMM/library.hmm
 -----------------------------------------------''')
@@ -103,6 +103,7 @@ SideroScannner: a tool for annotating IROMPs in bacteria
                        help='''super secret surprise!
 -----------------------------------------------''')
     group.add_argument("-h", action="help", help='''show this help message and exit''')
+    parser.add_argument('input', nargs='*', default=['-'], help=SUPPRESS)
     args = parser.parse_args()
 
     if args.v is True:
@@ -180,7 +181,7 @@ SideroScannner: a tool for annotating IROMPs in bacteria
             continue
 
         # Obtain proteins
-        proteins, input_type, lowqual = proteins_from_seq(seq, args.lowqual)
+        proteins, input_type, lowqual = proteins_from_seq(seq, args.lowqual, args.molecule)
         if proteins is None:
             continue
 

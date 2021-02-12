@@ -1,6 +1,6 @@
 requests>=2.23.0
 tqdm>=4.29.1
 pandas>=1.0.4
-sideroscanner~=0.0.4
+sideroscanner~=0.0.5
 setuptools~=49.6.0
 tabulate
