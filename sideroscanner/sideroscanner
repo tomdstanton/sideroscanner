@@ -42,13 +42,12 @@ if __name__ == "__main__":
 
     parser = ArgumentParser(add_help=False,
                             formatter_class=RawTextHelpFormatter,
-                            usage="sideroscanner [options] <IN.fasta>",
+                            usage="sideroscanner <IN.fasta> [options]",
                             description='''
 SideroScannner: a tool for annotating IROMPs in bacteria
 -----------------------------------------------------------------''')
-
+    parser.add_argument('input', nargs='*', default=['-'], help=SUPPRESS)
     group = parser.add_argument_group("Options")
-
     group.add_argument('-o', metavar='-', nargs='?', type=str,
                        const=f'sideroscanner_{datetime.today().strftime("%d%m%y_%H%M")}.csv',
                        help='''output results.csv instead of markdown STDOUT
@@ -103,7 +102,6 @@ SideroScannner: a tool for annotating IROMPs in bacteria
                        help='''super secret surprise!
 -----------------------------------------------''')
     group.add_argument("-h", action="help", help='''show this help message and exit''')
-    parser.add_argument('input', nargs='*', default=['-'], help=SUPPRESS)
     args = parser.parse_args()
 
     if args.v is True:
