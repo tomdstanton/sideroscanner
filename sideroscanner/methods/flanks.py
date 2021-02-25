@@ -46,8 +46,14 @@ def flank_screen(in_file, hits, flankpath, cds, threads):
                 gene_name = ''
                 description = out.split('[', 1)[0]
             else:
-                gene_name = out.split('GN=', 1)[1].split('PE=')[0]
-                description = out.split('OS=')[0]
+                try:
+                    gene_name = out.split('GN=', 1)[1].split('PE=')[0]
+                except IndexError:
+                    gene_name = ''
+                try:
+                    description = out.split('OS=')[0]
+                except IndexError:
+                    description = ''
             hit_list.append(f'{q.hsps[0].query_id}#'
                             f'{q.hsps[0].query_description}: '
                             f'{gene_name.strip()} '
