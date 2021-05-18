@@ -1,95 +1,97 @@
-"protein","acc","desc"
-"IroN","WP_004213617.1","Salmochelin receptor"
-"FepA","WP_001034943.1","Enterobactin receptor"
-"IutA","WP_001432292.1","Aerobactin receptor"
-"FhuA","WP_000124438.1","Ferrichrome receptor"
-"CirA","WP_000489247.1","DHBS/colicin receptor"
-"FecA","WP_000188267.1","Ferric-citrate receptor"
-"FyuA","WP_000784549.1","Yersiniabactin receptor"
-"Fiu","WP_000430049.1","DHBS receptor"
-"HmuR","WP_017879808.1","Hemin receptor"
-"FcuA","WP_002892882.1","Ferrichrome receptor"
-"IreA","WP_000792543.1","Virulence protein"
-"Iha","WP_001223344.1","Bifunctional siderophore receptor/adhesin"
-"FitA","WP_001051708.1","Coprogen receptor"
-"FhuE","WP_000953441.1","Rhodotorulic acid/coprogen receptor"
-"PfeA","WP_003090548.1","Enterobactin receptor"
-"BtuB","WP_000591403.1","Vitamin B12 receptor"
-"BauA","WP_002029394.1","Acinetobactin receptor"
-"FoxA","WP_004175467.1","Ferrioxamine receptor"
-"YncD","WP_000692056.1","TonB-dependent receptor"
-"YddB","WP_000832437.1","TonB-dependent receptor"
-"BfeA","WP_010931191.1","Enterobactin receptor"
-"FptA","WP_003118950.1","Pyochelin receptor"
-"FpvA","WP_004349900.1","Pyoverdine receptor"
-"FauA","WP_010930941.1","Alcaligin receptor"
-"HasR","WP_016852595.1","Heme receptor"
-"ShuA","WP_000089593.1","Heme/hemoglobin receptor"
-"YiuR","WP_013650120.1","Colicin receptor"
-"OprC","WP_001120663.1","TonB-dependent copper receptor"
-"FatA","WP_011154638.1","Anguibactin receptor"
-"PfuA","NP_250013.1","Hydroxamate-type siderophore receptor"
-"FiuA","WP_003113264.1","Ferrichrome receptor"
-"HxuC","WP_005694042.1","Heme receptor"
-"FpvB","WP_003112989.1","Pyoverdine receptor"
-"IrgA","WP_015297287.1","Enterobactin receptor"
-"FemA","WP_003114936.1","Mycobactin receptor"
-"OptJ","WP_003114901.1","TonB-dependent receptor"
-"PiuD","WP_003094598.1","TonB-dependent receptor"
-"OptE","WP_003114020.1","TonB-dependent receptor"
-"PA0151","WP_003112644.1","TonB-dependent receptor"
-"ChtA","WP_003113525.1","Aerobactin/rhizobactin/chizokinen receptor"
-"OptN","WP_003086926.1","Siderophore receptor"
-"OptF","WP_003113356.1","TonB-dependent receptor"
-"OptQ","WP_003113760.1","TonB-dependent receptor"
-"OptR","WP_003115567.1","TonB-dependent receptor"
-"ZnuD","WP_003101985.1","Zinc receptor"
-"OptO","WP_003114997.1","TonB-dependent receptor"
-"OptP","WP_003112659.1","TonB-dependent receptor"
-"OptL","WP_003114848.1","TonB-dependent receptor"
-"CntO","WP_010895685.1","Pseudopaline receptor"
-"CirA_1","WP_003114252.1","BtuB-like receptor"
-"OptM","WP_003114864.1","TonB-dependent receptor"
-"SppR","WP_010895598.1","Xenosiderophore receptor"
-"FvbA","WP_003112995.1","Vibriobactin receptor"
-"PhuR","WP_003113453.1","Heme/hemoglobin receptor"
-"HpuB","WP_002248160.1","Hemoglobin-haptoglobin receptor"
-"HgbA","WP_010945753.1","Hemoglobin/transferrin/lactoferrin family receptor"
-"HmbR","WP_002249780.1","Hemoglobin receptor"
-"TbpA","WP_010980797.1","Transferrin-binding protein"
-"BhuA","WP_002966591.1","Heme receptor"
-"FetA","WP_002224138.1","Enterobactin receptor"
-"CfrA","WP_010891883.1","Enterobactin receptor"
-"VctA","WP_000350325.1","Enterobactin receptor"
-"HuvA","WP_029189811.1","Heme receptor"
-"HutA","WP_000277183.1","Heme receptor"
-"BfrA","WP_003815626.1","DHBS receptor"
-"HutR","WP_013868376.1","Heme receptor"
-"PfhR","WP_102665938.1","Heme receptor"
-"HemR","WP_032908746.1","Heme receptor"
-"TdhA","WP_010944410.1","Heme receptor"
-"MhuA","WP_003673045.1","Heme receptor"
-"LbpA","WP_048339729.1","Lactoferrin receptor"
-"MxcH","WP_012236516.1","Myxochelin receptor"
-"RhtA","WP_010968208.1","Rhizobactin receptor"
-"RumA","WP_036416752.1","Ferric-citrate receptor"
-"VciA","WP_000017906.1","Ferrichrome receptor"
-"FegA","WP_014494851.1","Ferrioxamine receptor"
-"FctA","WP_013318789.1","Ferrichrysobactin receptor"
-"FmtA","WP_004534635.1","Malleobactin transporter"
-"OrbA","WP_006486047.1","Ornibactin receptor"
-"BfrZ","WP_003815597.1","Putative siderophore receptor"
-"PhrA","WP_058907536.1","TonB-dependent receptor"
-"PbuA","WP_011060591.1","Pseudobactin receptor"
-"PupA","WP_012273655.1","Pseudobactin receptor"
-"ViuA","WP_000279435.1","Vibriobactin receptor"
-"SftP","WP_027610179.1","Hexylsulfate receptor"
-"SuxA","WP_022558503.1","Sucrose receptor"
-"RagA","WP_043894263.1","Digested protein receptor"
-"SusC","WP_004322493.1","Starch receptor"
-"MalA","WP_010920148.1","Maltodextrin receptor"
-"PupB","WP_064389451.1","Ferric-pseudobactin BN7/BN8 receptor"
-"Oar","WP_014090975.1","PopC secretion protein"
-"PirA","WP_003117107.1","Ferric enterobactin receptor"
-"PiuA","NP_253204.1","Hydroxamate-type siderophore receptor"
-"BfnH","WP_000413997.1","Ferric aerobactin/cloacin receptor"
+protein,acc,desc
+IroN,WP_004213617.1,Salmochelin receptor
+FepA,WP_001034943.1,Enterobactin receptor
+IutA,WP_001432292.1,Aerobactin receptor
+FhuA,WP_000124438.1,Ferrichrome receptor
+CirA,WP_000489247.1,DHBS/colicin receptor
+FecA,WP_000188267.1,Ferric-citrate receptor
+FyuA,WP_000784549.1,Yersiniabactin receptor
+Fiu,WP_000430049.1,DHBS receptor
+HmuR,WP_017879808.1,Hemin receptor
+FcuA,WP_002892882.1,Ferrichrome receptor
+IreA,WP_000792543.1,Virulence protein
+Iha,WP_001223344.1,Bifunctional siderophore receptor/adhesin
+FitA,WP_001051708.1,Coprogen receptor
+FhuE,WP_000953441.1,Rhodotorulic acid/coprogen receptor
+PfeA,WP_003090548.1,Enterobactin receptor
+BtuB,WP_000591403.1,Vitamin B12 receptor
+BauA,WP_002029394.1,Acinetobactin receptor
+FoxA,WP_004175467.1,Ferrioxamine receptor
+YncD,WP_000692056.1,TonB-dependent receptor
+YddB,WP_000832437.1,TonB-dependent receptor
+BfeA,WP_010931191.1,Enterobactin receptor
+FptA,WP_003118950.1,Pyochelin receptor
+FpvA,WP_004349900.1,Pyoverdine receptor
+FauA,WP_010930941.1,Alcaligin receptor
+HasR,WP_016852595.1,Heme receptor
+ShuA,WP_000089593.1,Heme/hemoglobin receptor
+YiuR,WP_013650120.1,Colicin receptor
+OprC,WP_001120663.1,TonB-dependent copper receptor
+FatA,WP_011154638.1,Anguibactin receptor
+PfuA,NP_250013.1,Hydroxamate-type siderophore receptor
+FiuA,WP_003113264.1,Ferrichrome receptor
+HxuC,WP_005694042.1,Heme receptor
+FpvB,WP_003112989.1,Pyoverdine receptor
+IrgA,WP_015297287.1,Enterobactin receptor
+FemA,WP_003114936.1,Mycobactin receptor
+OptJ,WP_003114901.1,TonB-dependent receptor
+PiuD,WP_045544572.1,TonB-dependent receptor
+OptE,WP_003114020.1,TonB-dependent receptor
+PA0151,WP_003112644.1,TonB-dependent receptor
+ChtA,WP_003113525.1,Aerobactin/rhizobactin/chizokinen receptor
+OptN,WP_003086926.1,Siderophore receptor
+OptF,WP_003113356.1,TonB-dependent receptor
+OptQ,WP_003113760.1,TonB-dependent receptor
+OptR,WP_003115567.1,TonB-dependent receptor
+ZnuD,WP_003101985.1,Zinc receptor
+OptO,WP_003114997.1,TonB-dependent receptor
+OptP,WP_003112659.1,TonB-dependent receptor
+OptL,WP_003114848.1,TonB-dependent receptor
+CntO,WP_010895685.1,Pseudopaline receptor
+CirA_1,WP_003114252.1,BtuB-like receptor
+OptM,WP_003114864.1,TonB-dependent receptor
+SppR,WP_010895598.1,Xenosiderophore receptor
+FvbA,WP_003112995.1,Vibriobactin receptor
+PhuR,WP_003113453.1,Heme/hemoglobin receptor
+HpuB,WP_002248160.1,Hemoglobin-haptoglobin receptor
+HgbA,WP_010945753.1,Hemoglobin/transferrin/lactoferrin family receptor
+HmbR,WP_002249780.1,Hemoglobin receptor
+TbpA,WP_010980797.1,Transferrin-binding protein
+BhuA,WP_002966591.1,Heme receptor
+FetA,WP_002224138.1,Enterobactin receptor
+CfrA,WP_010891883.1,Enterobactin receptor
+VctA,WP_000350325.1,Enterobactin receptor
+HuvA,WP_029189811.1,Heme receptor
+HutA,WP_000277183.1,Heme receptor
+BfrA,WP_003815626.1,DHBS receptor
+HutR,WP_013868376.1,Heme receptor
+PfhR,WP_102665938.1,Heme receptor
+HemR,WP_032908746.1,Heme receptor
+TdhA,WP_010944410.1,Heme receptor
+MhuA,WP_003673045.1,Heme receptor
+LbpA,WP_048339729.1,Lactoferrin receptor
+MxcH,WP_012236516.1,Myxochelin receptor
+RhtA,WP_010968208.1,Rhizobactin receptor
+RumA,WP_036416752.1,Ferric-citrate receptor
+VciA,WP_000017906.1,Ferrichrome receptor
+FegA,WP_014494851.1,Ferrioxamine receptor
+FctA,WP_013318789.1,Ferrichrysobactin receptor
+FmtA,WP_004534635.1,Malleobactin transporter
+OrbA,WP_006486047.1,Ornibactin receptor
+BfrZ,WP_003815597.1,Putative siderophore receptor
+PhrA,WP_058907536.1,TonB-dependent receptor
+PbuA,WP_011060591.1,Pseudobactin receptor
+PupA,WP_012273655.1,Pseudobactin receptor
+ViuA,WP_000279435.1,Vibriobactin receptor
+SftP,WP_027610179.1,Hexylsulfate receptor
+SuxA,WP_022558503.1,Sucrose receptor
+RagA,WP_043894263.1,Digested protein receptor
+SusC,WP_004322493.1,Starch receptor
+MalA,WP_010920148.1,Maltodextrin receptor
+PupB,WP_064389451.1,Ferric-pseudobactin BN7/BN8 receptor
+Oar,WP_014090975.1,PopC secretion protein
+PirA,WP_003117107.1,Ferric enterobactin receptor
+PiuA,NP_253204.1,Hydroxamate-type siderophore receptor
+BfnH,WP_000413997.1,Ferric aerobactin/cloacin receptor
+LbpB,WP_002225048.1,Lactoferrin receptor
+TbpB,WP_010980796.1,Transferrin-binding protein

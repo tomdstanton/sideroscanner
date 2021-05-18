@@ -202,7 +202,7 @@ SideroScannner: a tool for annotating IROMPs in bacteria
             print("[>] Running hmmscan...   ", end="", flush=True)
             hits = pd.concat(
                 p.map(annotation_pool,
-                [rec.format("fasta") for rec in parse(StringIO(iromps),
+                    [rec.format("fasta") for rec in parse(StringIO(iromps),
                                                       "fasta")])).reset_index(drop=True)
 
         if hits is None:

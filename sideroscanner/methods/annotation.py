@@ -43,8 +43,16 @@ def annotate(in_file, input_type, lib, threads):
                                        'description', 'score'])
     data = []
     for r in parse(StringIO(in_file), 'fasta'):
-        data.append(f'{r.id},{str(len(r.seq))},'
-                    f'{str(round((ProteinAnalysis(r._seq._data).molecular_weight()/1000),1))}')
+        prot = ''
+        for line in r._seq._data: # replace ambiguous residues
+            prot += line.replace('B', 'D').replace('Z', 'E').replace('J', 'L')
+        if 'X' in prot: # cannot calculate for unknown residues
+            mol_wgt = 'Unknown'
+        else:
+            mol_wgt = str(round((ProteinAnalysis(prot).molecular_weight() / 1000), 1))
+
+        data.append(f'{r.id},{str(len(r.seq))},{mol_wgt}')
+
     len_mass_df = pd.DataFrame([sub.split(",") for sub in data],
                                columns=['query', 'len', 'kDa'])
     if not input_type == 'genome':
