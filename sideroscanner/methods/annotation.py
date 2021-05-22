@@ -11,6 +11,8 @@ from sideroscanner.tools.hmmer3 import run_hmmsearch
 
 def domain_filter(in_file, iromppath, lowqual, threads):
     q = run_hmmsearch(in_file, iromppath + '/PF07715.hmm', threads)
+    if not q:
+        return []
     in_file_dict = to_dict(parse(StringIO(in_file), 'fasta'))
     filter1 = ''
     for h in q.hit_keys:
@@ -30,7 +32,10 @@ def domain_filter(in_file, iromppath, lowqual, threads):
 
 def annotate(in_file, input_type, lib, threads):
     data = []
-    for q in run_hmmscan(in_file, lib, threads):
+    hmmscan_out = run_hmmscan(in_file, lib, threads)
+    if not hmmscan_out:
+        return None
+    for q in hmmscan_out:
         if len(q.hits) > 0:
             data.append(f'{q.id.rsplit("_", 1)[0]},{q.id}'
                         f',{q.hits[0].id},{q.hits[0].description}'

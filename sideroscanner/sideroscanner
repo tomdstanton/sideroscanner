@@ -205,7 +205,7 @@ SideroScannner: a tool for annotating IROMPs in bacteria
                     [rec.format("fasta") for rec in parse(StringIO(iromps),
                                                       "fasta")])).reset_index(drop=True)
 
-        if hits is None:
+        if hits is None or len(hits.index) == 0:
             print('[!] No significant hits')
             continue
         else:

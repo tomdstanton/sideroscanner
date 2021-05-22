@@ -14,8 +14,11 @@ def run_hmmsearch(in_file, hmm, threads):
     print("[>] Running hmmsearch... ", end="", flush=True)
     cmd = ['hmmsearch', '--noali', '--cut_tc', '--cpu', threads, hmm, '-']
     child = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-    child.stdin.write(in_file.encode())
-    return SearchIO.read(StringIO(child.communicate()[0].decode('utf-8')), 'hmmer3-text')
+    try:
+        child.stdin.write(in_file.encode())
+        return SearchIO.read(StringIO(child.communicate()[0].decode('utf-8')), 'hmmer3-text')
+    except IOError:
+        return print(f'\n[!] hmmer failed to run, is your input DNA?')
 
 
 def run_hmmscan(in_file, hmm, threads):
@@ -25,8 +28,12 @@ def run_hmmscan(in_file, hmm, threads):
            #'--domE', '0.2', '-E', '1e-50',
            '--cpu', threads, hmm, '-']
     child = Popen(cmd, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-    child.stdin.write(in_file.encode())
-    return SearchIO.parse(StringIO(child.communicate()[0].decode('utf-8')), 'hmmer3-text')
+    try:
+        child.stdin.write(in_file.encode())
+        return SearchIO.parse(StringIO(child.communicate()[0].decode('utf-8')), 'hmmer3-text')
+    except IOError:
+        return print(f'\n[!] hmmer failed to run, is {in_file} DNA?')
+
 
 
 def run_hmmbuild(in_file, id, out_file, threads):

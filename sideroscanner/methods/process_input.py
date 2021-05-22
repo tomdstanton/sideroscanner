@@ -50,7 +50,8 @@ def proteins_from_seq(seq, qual_arg, mol_arg):
             proteins = run_orfm(seq)
 
         # Check if protein
-        if "E" in '\n'.join(seq.split('\n')[1:])[0:99] or mol_arg == 'protein':
+
+        if "E" in ''.join(i for i in seq.split('\n')[:10] if '>' not in i) or mol_arg == 'protein':
             input_type = 'protein'
             if mol_arg == 'protein':
                 print(f'[-] User specified {input_type} input, ', end="", flush=True)
@@ -89,7 +90,7 @@ def proteins_from_seq(seq, qual_arg, mol_arg):
                 print(f'[?] Guessing {input_type} input')
                 proteins = run_orfm(seq)
 
-    elif '@' in '\n'.join(seq.split('\n')[1:])[0:99]:
+    elif '@' in '\n'.join(i for i in seq.split('\n')[:10]):
         input_type = 'fastq'
         print(f'[?] Guessing {input_type} input'
               f'[!] finding ORFs in fastq files depends on read length')
