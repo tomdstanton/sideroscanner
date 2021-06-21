@@ -1,10 +1,9 @@
 # SideroScanner
 ###### A tool for annotating IROMPs in bacteria
-_By Tom Stanton_ \
-Schneiders Lab - University of Edinburgh
-
+_By Tom Stanton_ :scientist: \
+[![alt text][1.1]][1] [![alt text][6.1]][6] \
 Issues/queries/advice?
-[email me!](mailto:s1895738@ed.ac.uk?subject=[SideroScanner])
+[email me!](mailto:s1895738@ed.ac.uk?subject=[sideroscanner])
 
 [![alt text][1.1]][1]
 [![alt text][6.1]][6]
