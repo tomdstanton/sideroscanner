@@ -4,10 +4,6 @@ _By Tom Stanton_ :scientist: \
 [![alt text][1.1]][1] [![alt text][6.1]][6] \
 Issues/queries/advice?
 [email me!](mailto:s1895738@ed.ac.uk?subject=[sideroscanner])
-
-[![alt text][1.1]][1]
-[![alt text][6.1]][6]
-
 [1]: http://twitter.com/tomstantonmicro
 [1.1]: http://i.imgur.com/tXSoThF.png (twitter icon with padding)
 [6]: http://www.github.com/tomdstanton
