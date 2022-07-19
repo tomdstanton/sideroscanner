@@ -4,3 +4,5 @@ pandas>=1.0.4
 sideroscanner~=0.0.5
 setuptools~=49.6.0
 tabulate
+multiprocess>=0.70.13
+biopython>=1.78
