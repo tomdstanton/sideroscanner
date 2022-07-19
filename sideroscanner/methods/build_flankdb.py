@@ -24,7 +24,7 @@ def get_flankdb(flankpath):
         'http://www.mgc.ac.cn/VFs/Down/VFDB_setB_pro.fas.gz', None, flankpath + '/vfdb.faa.gz')
 
     params = {'query': 'siderophore AND '
-                       'taxonomy:"Bacteria [2]" AND '
+                       'taxonomy_id:2 AND '
                        'NOT receptor NOT partial NOT fragment', 'format': 'fasta'}
     bgcs = fetch_url('http://www.uniprot.org/uniprot/', params, flankpath + '/bgcs.faa')
 
