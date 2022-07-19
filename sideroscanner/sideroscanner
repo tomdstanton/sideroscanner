@@ -16,7 +16,7 @@ from sys import exit
 import pandas as pd
 from Bio.SeqIO import parse
 from io import StringIO
-from multiprocessing import Pool
+from multiprocess import Pool
 
 import sideroscanner
 from sideroscanner.methods.process_input import check_seq, proteins_from_seq
