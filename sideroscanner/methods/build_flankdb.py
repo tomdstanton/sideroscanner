@@ -26,7 +26,7 @@ def get_flankdb(flankpath):
     params = {'query': 'siderophore AND '
                        'taxonomy_id:2 AND '
                        'NOT receptor NOT partial NOT fragment', 'format': 'fasta'}
-    bgcs = fetch_url('http://www.uniprot.org/uniprot/', params, flankpath + '/bgcs.faa')
+    bgcs = fetch_url('http://rest.uniprot.org/uniprotkb/stream?', params, flankpath + '/bgcs.faa')
 
     filenames = [patric, victors, vfdb, bgcs]
 
